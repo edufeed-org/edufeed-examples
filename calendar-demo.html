@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Edufeed Calendar – Live demo &amp; docs</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #fbfaf6;
+    --panel: #ffffff;
+    --panel-2: #f3f1ea;
+    --border: #e3dfd4;
+    --text: #1f2533;
+    --muted: #5f6776;
+    --accent: #2a5db0;
+    --accent-soft: #eaf0fa;
+    --accent-2: #b8651b;
+    --ok: #1f8a5a;
+    --err: #b8344a;
+    --code-bg: #1f2533;
+    --shadow: 0 1px 2px rgba(31,37,51,.05), 0 6px 20px rgba(31,37,51,.07);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); }
+  body { line-height: 1.5; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 32px 20px 80px; }
+  header h1 { margin: 0 0 6px; font-size: 28px; letter-spacing: -.01em; }
+  header p { margin: 0; color: var(--muted); }
+  section { margin-top: 36px; }
+  h2 { font-size: 20px; margin: 0 0 12px; letter-spacing: -.01em; }
+  h2 .pill { font-size: 11px; font-weight: 600; color: var(--accent); border: 1px solid var(--border); padding: 2px 8px; border-radius: 999px; margin-left: 8px; vertical-align: middle; }
+  p { margin: 0 0 12px; }
+  a { color: var(--accent); }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  code { background: var(--panel-2); padding: 1px 6px; border-radius: 4px; font-size: 13px; }
+  pre { background: var(--code-bg); color: #e9edf5; padding: 14px 16px; border-radius: 8px; overflow-x: auto; font-size: 12.5px; line-height: 1.55; }
+  pre code { background: transparent; padding: 0; border-radius: 0; font-size: inherit; color: inherit; }
+  .grid-docs { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+  .doc-card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .doc-card h3 { margin: 0 0 6px; font-size: 14px; color: var(--accent); }
+  .doc-card p, .doc-card ul { margin: 0; color: var(--muted); font-size: 13.5px; }
+  .doc-card ul { padding-left: 18px; }
+
+  /* Controls */
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 12px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; }
+  .controls label { font-size: 13px; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; }
+  .controls input[type=text], .controls select {
+    background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
+    padding: 6px 10px; border-radius: 6px; font: inherit;
+  }
+  .controls button {
+    background: var(--accent); color: white; border: 0; padding: 7px 14px; border-radius: 6px;
+    font: inherit; font-weight: 600; cursor: pointer;
+  }
+  .controls button.secondary { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); }
+  .status { font-size: 12.5px; color: var(--muted); margin-left: auto; }
+  .status .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); margin-right: 6px; vertical-align: middle; }
+  .status.connected .dot { background: var(--ok); }
+  .status.error .dot { background: var(--err); }
+
+  /* Design switcher */
+  .tabs { display: flex; gap: 2px; flex-wrap: wrap; margin: 18px 0 12px; border-bottom: 1px solid var(--border); }
+  .tabs button {
+    background: transparent; color: var(--muted); border: 0; border-bottom: 2px solid transparent;
+    padding: 8px 14px; font: inherit; font-weight: 600; cursor: pointer; font-size: 14px;
+  }
+  .tabs button.active { color: var(--text); border-bottom-color: var(--accent); }
+
+  /* Shared */
+  .events { min-height: 200px; }
+  .empty { color: var(--muted); padding: 30px; text-align: center; border: 1px dashed var(--border); border-radius: 10px; }
+  .date-badge { display: inline-flex; align-items: baseline; gap: 4px; font-variant-numeric: tabular-nums; }
+
+  /* Design 1: Card grid */
+  .design-cards { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px;
+    display: flex; flex-direction: column; gap: 10px; box-shadow: var(--shadow);
+    transition: transform .12s ease, border-color .12s ease;
+  }
+  .card:hover { transform: translateY(-2px); border-color: var(--accent); }
+  .card .when { font-size: 12px; color: var(--accent); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+  .card h3 { margin: 0; font-size: 16px; line-height: 1.3; }
+  .card .summary { color: var(--muted); font-size: 13.5px; flex-grow: 1; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+  .card .meta { color: var(--muted); font-size: 12.5px; display: flex; flex-wrap: wrap; gap: 10px; }
+  .card .meta span::before { content: ""; display: inline-block; width: 4px; height: 4px; border-radius: 50%; background: var(--muted); margin-right: 6px; vertical-align: middle; opacity: .6; }
+
+  /* Design 2: Compact list */
+  .design-list { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .row { display: grid; grid-template-columns: 110px 1fr auto; gap: 14px; padding: 12px 16px; border-bottom: 1px solid var(--border); align-items: center; }
+  .row:last-child { border-bottom: 0; }
+  .row:hover { background: var(--panel-2); }
+  .row .rdate { color: var(--accent); font-weight: 700; font-size: 13px; font-variant-numeric: tabular-nums; }
+  .row .rdate .y { display: block; color: var(--muted); font-weight: 500; font-size: 11px; }
+  .row .rtitle { font-weight: 600; font-size: 14.5px; }
+  .row .rsub { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+  .row .rkind { font-size: 11px; color: var(--muted); padding: 2px 8px; border: 1px solid var(--border); border-radius: 999px; white-space: nowrap; }
+
+  /* Design 3: Timeline / agenda */
+  .design-agenda { position: relative; }
+  .agenda-day { display: grid; grid-template-columns: 90px 1fr; gap: 18px; padding: 14px 0; border-top: 1px solid var(--border); }
+  .agenda-day:first-child { border-top: 0; }
+  .agenda-day .day-head { position: sticky; top: 12px; align-self: start; }
+  .agenda-day .day-num { font-size: 30px; font-weight: 700; line-height: 1; }
+  .agenda-day .day-wkd { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-top: 4px; }
+  .agenda-day .day-mon { font-size: 13px; color: var(--accent); font-weight: 600; }
+  .agenda-items { display: flex; flex-direction: column; gap: 10px; }
+  .agenda-item { background: var(--panel); border-left: 3px solid var(--accent); border-radius: 6px; padding: 10px 14px; }
+  .agenda-item .ai-time { font-size: 12px; color: var(--accent-2); font-weight: 600; }
+  .agenda-item .ai-title { font-weight: 600; margin: 2px 0 4px; }
+  .agenda-item .ai-meta { font-size: 12px; color: var(--muted); }
+
+  /* Design 4: Minimal poster */
+  .design-poster { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+  .poster {
+    background: linear-gradient(135deg, var(--panel) 0%, var(--panel-2) 100%);
+    border: 1px solid var(--border); border-radius: 14px; padding: 18px; aspect-ratio: 4/5;
+    display: flex; flex-direction: column; justify-content: space-between; overflow: hidden;
+    position: relative;
+  }
+  .poster::before {
+    content: ""; position: absolute; top: -40px; right: -40px; width: 120px; height: 120px;
+    border-radius: 50%; background: var(--accent); opacity: .12;
+  }
+  .poster .p-date { font-size: 11px; font-weight: 700; color: var(--accent); letter-spacing: .12em; text-transform: uppercase; }
+  .poster .p-day { font-size: 56px; font-weight: 800; line-height: 1; margin-top: 8px; letter-spacing: -.04em; }
+  .poster .p-mon { font-size: 14px; font-weight: 700; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
+  .poster .p-title { font-size: 14px; font-weight: 600; line-height: 1.3; margin-top: 12px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .poster .p-loc { font-size: 11.5px; color: var(--muted); margin-top: 6px; }
+
+  /* Modal */
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: none; align-items: center; justify-content: center; padding: 20px; z-index: 50; }
+  .modal-backdrop.open { display: flex; }
+  .modal { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; max-width: 640px; width: 100%; max-height: 90vh; overflow: auto; padding: 22px; box-shadow: var(--shadow); }
+  .modal h3 { margin: 0 0 4px; font-size: 18px; }
+  .modal .m-when { color: var(--accent); font-size: 13px; font-weight: 600; margin-bottom: 14px; }
+  .modal .m-meta { color: var(--muted); font-size: 13px; margin-bottom: 14px; }
+  .modal .m-body { white-space: pre-wrap; font-size: 14px; }
+  .modal .close { float: right; background: var(--panel-2); border: 1px solid var(--border); color: var(--text); padding: 4px 10px; border-radius: 6px; cursor: pointer; font: inherit; }
+
+  /* Util */
+  .clickable { cursor: pointer; }
+  .small { font-size: 12.5px; color: var(--muted); }
+  hr.sep { border: 0; border-top: 1px solid var(--border); margin: 24px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Edufeed Calendar Events</h1>
+  <p>Live demo &amp; documentation — how to read NIP-52 calendar events from <code>relay.edufeed.org</code> and render them in different designs.</p>
+</header>
+
+<section>
+  <h2>What you get <span class="pill">NIP-52</span></h2>
+  <p>The relay <code>wss://relay.edufeed.org</code> publishes educational events as <a href="https://github.com/nostr-protocol/nips/blob/master/52.md" target="_blank" rel="noopener">NIP-52</a> calendar events on the Nostr protocol. There are four kinds:</p>
+  <div class="grid-docs">
+    <div class="doc-card">
+      <h3>kind 31922 — date-based</h3>
+      <p>Full-day or multi-day events. <code>start</code> / <code>end</code> are <code>YYYY-MM-DD</code> strings.</p>
+    </div>
+    <div class="doc-card">
+      <h3>kind 31923 — time-based</h3>
+      <p>Events with a specific time. <code>start</code> / <code>end</code> are unix timestamps; optional <code>start_tzid</code>.</p>
+    </div>
+    <div class="doc-card">
+      <h3>kind 31924 — calendar</h3>
+      <p>A collection that references other events via <code>a</code>-tags. Used to group events into named calendars.</p>
+    </div>
+    <div class="doc-card">
+      <h3>kind 31925 — RSVP</h3>
+      <p>A reply to an event with a <code>status</code> tag of <code>accepted</code>, <code>declined</code>, or <code>tentative</code>.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Fetch via WebSocket (browser)</h2>
+  <p>Nostr is a plain WebSocket protocol. Open a socket, send a <code>REQ</code> frame describing the kinds you want, then collect <code>EVENT</code> messages until you receive <code>EOSE</code> (end of stored events). This is exactly what the demo below does:</p>
+  <pre><code>const ws = new WebSocket("wss://relay.edufeed.org");
+ws.onopen = () =&gt; {
+  ws.send(JSON.stringify([
+    "REQ", "cal-sub",
+    { kinds: [31922, 31923], limit: 500 }
+  ]));
+};
+ws.onmessage = (msg) =&gt; {
+  const [type, sub, payload] = JSON.parse(msg.data);
+  if (type === "EVENT") render(payload);
+  if (type === "EOSE")  ws.send(JSON.stringify(["CLOSE", sub]));
+};</code></pre>
+</section>
+
+<section>
+  <h2>Fetch via CLI (<code>nak</code>)</h2>
+  <p>For scripts and backups, the <a href="https://github.com/fiatjaf/nak" target="_blank" rel="noopener">nak</a> tool works well:</p>
+  <pre><code>nak req --paginate --paginate-interval 1s \
+  -k 31922 -k 31923 -k 31924 -k 31925 \
+  relay.edufeed.org &gt; calendar-events.jsonl</code></pre>
+</section>
+
+<section>
+  <h2>Live demo</h2>
+  <div class="controls">
+    <label>Relay
+      <input type="text" id="relay" value="wss://relay.edufeed.org" size="28">
+    </label>
+    <label>Show
+      <select id="kinds">
+        <option value="31922,31923">All events</option>
+        <option value="31922">Date-based (31922)</option>
+        <option value="31923">Time-based (31923)</option>
+      </select>
+    </label>
+    <label>Filter
+      <select id="when">
+        <option value="upcoming">Upcoming</option>
+        <option value="all">All</option>
+        <option value="past">Past</option>
+      </select>
+    </label>
+    <button id="reload">Reload</button>
+    <div class="status" id="status"><span class="dot"></span><span class="text">idle</span></div>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <button data-design="cards" class="active">Cards</button>
+    <button data-design="list">Compact list</button>
+    <button data-design="agenda">Agenda</button>
+    <button data-design="poster">Poster grid</button>
+  </div>
+
+  <div class="events" id="events">
+    <div class="empty">Loading events from the relay…</div>
+  </div>
+</section>
+
+<hr class="sep">
+<p class="small">Standalone — no build step, no external scripts. Save this file and open it in a browser.</p>
+
+</div>
+
+<div class="modal-backdrop" id="modal-backdrop">
+  <div class="modal" id="modal">
+    <button class="close" id="modal-close">Close</button>
+    <h3 id="m-title"></h3>
+    <div class="m-when" id="m-when"></div>
+    <div class="m-meta" id="m-meta"></div>
+    <div class="m-body" id="m-body"></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const els = {
+    relay:   document.getElementById('relay'),
+    kinds:   document.getElementById('kinds'),
+    when:    document.getElementById('when'),
+    reload:  document.getElementById('reload'),
+    status:  document.getElementById('status'),
+    tabs:    document.getElementById('tabs'),
+    events:  document.getElementById('events'),
+    modal:   document.getElementById('modal-backdrop'),
+    mTitle:  document.getElementById('m-title'),
+    mWhen:   document.getElementById('m-when'),
+    mMeta:   document.getElementById('m-meta'),
+    mBody:   document.getElementById('m-body'),
+    mClose:  document.getElementById('modal-close'),
+  };
+
+  let allEvents = [];
+  let currentDesign = 'cards';
+  let ws = null;
+
+  // --- Status helpers ------------------------------------------------------
+  function setStatus(state, text) {
+    els.status.className = 'status ' + (state || '');
+    els.status.querySelector('.text').textContent = text;
+  }
+
+  // --- Event parsing -------------------------------------------------------
+  function tagValue(ev, name) {
+    const t = ev.tags.find(t => t[0] === name);
+    return t ? t[1] : null;
+  }
+  function tagValues(ev, name) {
+    return ev.tags.filter(t => t[0] === name).map(t => t[1]);
+  }
+  function parseStart(ev) {
+    const s = tagValue(ev, 'start');
+    if (!s) return null;
+    if (ev.kind === 31922) {
+      // YYYY-MM-DD — treat as local midnight
+      const [y, m, d] = s.split('-').map(Number);
+      if (!y || !m || !d) return null;
+      return new Date(y, m - 1, d);
+    } else {
+      // Unix timestamp seconds (string)
+      const n = Number(s);
+      if (!Number.isFinite(n)) return null;
+      return new Date(n * 1000);
+    }
+  }
+  function parseEnd(ev) {
+    const s = tagValue(ev, 'end');
+    if (!s) return null;
+    if (ev.kind === 31922) {
+      const [y, m, d] = s.split('-').map(Number);
+      if (!y || !m || !d) return null;
+      return new Date(y, m - 1, d);
+    } else {
+      const n = Number(s);
+      if (!Number.isFinite(n)) return null;
+      return new Date(n * 1000);
+    }
+  }
+  function enrich(ev) {
+    return {
+      raw: ev,
+      id: ev.id,
+      kind: ev.kind,
+      title: tagValue(ev, 'title') || '(untitled)',
+      summary: tagValue(ev, 'summary') || ev.content || '',
+      location: tagValue(ev, 'location') || '',
+      refs: tagValues(ev, 'r'),
+      start: parseStart(ev),
+      end: parseEnd(ev),
+    };
+  }
+
+  // --- Formatting ----------------------------------------------------------
+  const WKD = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function fmtDate(d) { return `${WKD[d.getDay()]}, ${d.getDate()} ${MON[d.getMonth()]} ${d.getFullYear()}`; }
+  function fmtDateShort(d) { return `${d.getDate()} ${MON[d.getMonth()]}`; }
+  function fmtTime(d) { return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0'); }
+  function fmtWhen(ev) {
+    if (!ev.start) return '';
+    if (ev.kind === 31922) {
+      if (ev.end && ev.end.getTime() !== ev.start.getTime()) {
+        // NIP-52: end is exclusive — show end-1 day
+        const e = new Date(ev.end); e.setDate(e.getDate() - 1);
+        if (e.getTime() === ev.start.getTime()) return fmtDate(ev.start);
+        return fmtDateShort(ev.start) + ' – ' + fmtDate(e);
+      }
+      return fmtDate(ev.start);
+    } else {
+      const t = ' · ' + fmtTime(ev.start) + (ev.end ? '–' + fmtTime(ev.end) : '');
+      return fmtDate(ev.start) + t;
+    }
+  }
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function trunc(s, n) { s = String(s); return s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s; }
+
+  // --- Network -------------------------------------------------------------
+  function fetchEvents() {
+    if (ws) { try { ws.close(); } catch {} ws = null; }
+    allEvents = [];
+    render();
+    setStatus('', 'connecting…');
+
+    const url = els.relay.value.trim();
+    const kinds = els.kinds.value.split(',').map(Number);
+    let socket;
+    try {
+      socket = new WebSocket(url);
+    } catch (e) {
+      setStatus('error', 'cannot open: ' + e.message);
+      return;
+    }
+    ws = socket;
+    const subId = 'cal-' + Math.random().toString(36).slice(2, 9);
+    const seen = new Set();
+    let count = 0;
+
+    socket.onopen = () => {
+      setStatus('connected', 'connected — requesting events…');
+      socket.send(JSON.stringify(['REQ', subId, { kinds, limit: 1000 }]));
+    };
+    socket.onmessage = (msg) => {
+      let frame;
+      try { frame = JSON.parse(msg.data); } catch { return; }
+      const [type, sub, payload] = frame;
+      if (type === 'EVENT' && sub === subId) {
+        if (seen.has(payload.id)) return;
+        seen.add(payload.id);
+        allEvents.push(enrich(payload));
+        count++;
+        setStatus('connected', `received ${count} events…`);
+      } else if (type === 'EOSE' && sub === subId) {
+        socket.send(JSON.stringify(['CLOSE', subId]));
+        socket.close();
+        setStatus('connected', `loaded ${count} events`);
+        render();
+      } else if (type === 'NOTICE') {
+        console.warn('Relay notice:', payload);
+      }
+    };
+    socket.onerror = () => setStatus('error', 'websocket error');
+    socket.onclose = () => { if (count === 0) setStatus('error', 'connection closed before events'); };
+  }
+
+  // --- Filtering -----------------------------------------------------------
+  function filtered() {
+    const now = new Date();
+    const mode = els.when.value;
+    return allEvents
+      .filter(e => e.start)
+      .filter(e => {
+        const ref = e.end || e.start;
+        if (mode === 'upcoming') return ref >= now;
+        if (mode === 'past')     return ref <  now;
+        return true;
+      })
+      .sort((a, b) => a.start - b.start);
+  }
+
+  // --- Renderers -----------------------------------------------------------
+  function render() {
+    const list = filtered();
+    if (list.length === 0) {
+      els.events.innerHTML = '<div class="empty">No events to show yet.</div>';
+      return;
+    }
+    const renderer = renderers[currentDesign] || renderers.cards;
+    els.events.innerHTML = renderer(list);
+    // wire clicks
+    els.events.querySelectorAll('[data-id]').forEach(el => {
+      el.addEventListener('click', () => {
+        const ev = allEvents.find(e => e.id === el.dataset.id);
+        if (ev) openModal(ev);
+      });
+    });
+  }
+
+  const renderers = {
+    cards(list) {
+      return '<div class="design-cards">' + list.map(e => `
+        <div class="card clickable" data-id="${e.id}">
+          <div class="when">${escapeHtml(fmtWhen(e))}</div>
+          <h3>${escapeHtml(e.title)}</h3>
+          <div class="summary">${escapeHtml(trunc(e.summary, 220))}</div>
+          <div class="meta">
+            ${e.location ? `<span>${escapeHtml(e.location)}</span>` : ''}
+            <span>kind ${e.kind}</span>
+          </div>
+        </div>
+      `).join('') + '</div>';
+    },
+
+    list(list) {
+      return '<div class="design-list">' + list.map(e => {
+        const d = e.start;
+        return `
+          <div class="row clickable" data-id="${e.id}">
+            <div class="rdate">
+              ${d ? `${d.getDate()} ${MON[d.getMonth()]}<span class="y">${d.getFullYear()}${e.kind === 31923 ? ' · ' + fmtTime(d) : ''}</span>` : '—'}
+            </div>
+            <div>
+              <div class="rtitle">${escapeHtml(e.title)}</div>
+              <div class="rsub">${escapeHtml(e.location || trunc(e.summary, 140))}</div>
+            </div>
+            <div class="rkind">${e.kind === 31922 ? 'date' : 'time'}</div>
+          </div>
+        `;
+      }).join('') + '</div>';
+    },
+
+    agenda(list) {
+      // group by YYYY-MM-DD of start
+      const groups = new Map();
+      for (const e of list) {
+        const k = e.start.toISOString().slice(0, 10);
+        if (!groups.has(k)) groups.set(k, []);
+        groups.get(k).push(e);
+      }
+      let html = '<div class="design-agenda">';
+      for (const [k, evs] of groups) {
+        const d = evs[0].start;
+        html += `
+          <div class="agenda-day">
+            <div class="day-head">
+              <div class="day-mon">${MON[d.getMonth()]} ${d.getFullYear()}</div>
+              <div class="day-num">${d.getDate()}</div>
+              <div class="day-wkd">${WKD[d.getDay()]}</div>
+            </div>
+            <div class="agenda-items">
+              ${evs.map(e => `
+                <div class="agenda-item clickable" data-id="${e.id}">
+                  ${e.kind === 31923 ? `<div class="ai-time">${fmtTime(e.start)}${e.end ? '–' + fmtTime(e.end) : ''}</div>` : `<div class="ai-time">all day</div>`}
+                  <div class="ai-title">${escapeHtml(e.title)}</div>
+                  ${e.location ? `<div class="ai-meta">${escapeHtml(e.location)}</div>` : ''}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+      return html + '</div>';
+    },
+
+    poster(list) {
+      return '<div class="design-poster">' + list.map(e => {
+        const d = e.start;
+        return `
+          <div class="poster clickable" data-id="${e.id}">
+            <div>
+              <div class="p-date">${WKD[d.getDay()]}</div>
+              <div class="p-day">${d.getDate()}</div>
+              <div class="p-mon">${MON[d.getMonth()]} ${d.getFullYear()}</div>
+            </div>
+            <div>
+              <div class="p-title">${escapeHtml(e.title)}</div>
+              ${e.location ? `<div class="p-loc">${escapeHtml(e.location)}</div>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('') + '</div>';
+    },
+  };
+
+  // --- Modal ---------------------------------------------------------------
+  function openModal(e) {
+    els.mTitle.textContent = e.title;
+    els.mWhen.textContent = fmtWhen(e);
+    const parts = [];
+    if (e.location) parts.push('📍 ' + e.location);
+    parts.push('kind ' + e.kind);
+    parts.push('id ' + e.id.slice(0, 12) + '…');
+    els.mMeta.textContent = parts.join(' · ');
+    let body = e.summary || '';
+    if (e.refs.length) body += (body ? '\n\n' : '') + 'Links:\n' + e.refs.map(r => '• ' + r).join('\n');
+    els.mBody.textContent = body;
+    els.modal.classList.add('open');
+  }
+  function closeModal() { els.modal.classList.remove('open'); }
+  els.mClose.addEventListener('click', closeModal);
+  els.modal.addEventListener('click', (ev) => { if (ev.target === els.modal) closeModal(); });
+  document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') closeModal(); });
+
+  // --- Wire up -------------------------------------------------------------
+  els.tabs.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      els.tabs.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentDesign = btn.dataset.design;
+      render();
+    });
+  });
+  els.reload.addEventListener('click', fetchEvents);
+  els.kinds.addEventListener('change', fetchEvents);
+  els.when.addEventListener('change', render);
+
+  // Initial fetch
+  fetchEvents();
+})();
+</script>
+</body>
+</html>
