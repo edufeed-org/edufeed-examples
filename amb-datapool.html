@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Edufeed Educational Data Pool — integration guide</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #fbfaf6;
+    --panel: #ffffff;
+    --panel-2: #f3f1ea;
+    --border: #e3dfd4;
+    --text: #1f2533;
+    --muted: #5f6776;
+    --accent: #2a5db0;
+    --accent-soft: #eaf0fa;
+    --accent-2: #b8651b;
+    --ok: #1f8a5a;
+    --err: #b8344a;
+    --code-bg: #1f2533;
+    --shadow: 0 1px 2px rgba(31,37,51,.05), 0 6px 20px rgba(31,37,51,.07);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); }
+  body { line-height: 1.5; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 32px 20px 80px; }
+  header h1 { margin: 0 0 6px; font-size: 28px; letter-spacing: -.01em; }
+  header p { margin: 0; color: var(--muted); }
+  section { margin-top: 36px; }
+  h2 { font-size: 20px; margin: 0 0 12px; letter-spacing: -.01em; }
+  h2 .pill { font-size: 11px; font-weight: 600; color: var(--accent); border: 1px solid var(--border); padding: 2px 8px; border-radius: 999px; margin-left: 8px; vertical-align: middle; }
+  p { margin: 0 0 12px; }
+  a { color: var(--accent); }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  code { background: var(--panel-2); padding: 1px 6px; border-radius: 4px; font-size: 13px; }
+  pre { background: var(--code-bg); color: #e9edf5; padding: 14px 16px; border-radius: 8px; overflow-x: auto; font-size: 12.5px; line-height: 1.55; }
+  pre code { background: transparent; padding: 0; border-radius: 0; font-size: inherit; color: inherit; }
+  .doc-card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .doc-card h3 { margin: 0 0 6px; font-size: 14px; color: var(--accent); }
+  .doc-card p, .doc-card ul { margin: 0; color: var(--muted); font-size: 13.5px; }
+  .doc-card ul { padding-left: 18px; }
+
+  /* Controls */
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 12px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; }
+  .controls label { font-size: 13px; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; }
+  .controls input[type=text], .controls input[type=search], .controls select {
+    background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
+    padding: 6px 10px; border-radius: 6px; font: inherit;
+  }
+  .controls button {
+    background: var(--accent); color: white; border: 0; padding: 7px 14px; border-radius: 6px;
+    font: inherit; font-weight: 600; cursor: pointer;
+  }
+  .controls button.secondary { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); }
+  .status { font-size: 12.5px; color: var(--muted); margin-left: auto; }
+  .status .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); margin-right: 6px; vertical-align: middle; }
+  .status.connected .dot { background: var(--ok); }
+  .status.error .dot { background: var(--err); }
+
+  /* Mapping table */
+  .mapping-table { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-bottom: 12px; }
+  .mapping-table th { background: var(--panel-2); text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+  .mapping-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .mapping-table tr:last-child td { border-bottom: 0; }
+  .mapping-table tr:hover td { background: var(--panel-2); }
+  .mapping-table .note { color: var(--muted); font-size: 12px; }
+
+  /* Widget textareas */
+  .widget-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  @media (max-width: 720px) { .widget-row { grid-template-columns: 1fr; } }
+  .widget-row textarea {
+    width: 100%; height: 340px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px; line-height: 1.5; background: var(--code-bg); color: #e9edf5;
+    border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; resize: vertical;
+  }
+  .widget-label { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 4px; }
+
+  /* Misc */
+  hr.sep { border: 0; border-top: 1px solid var(--border); margin: 24px 0; }
+  .small { font-size: 12.5px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Edufeed Educational Data Pool — integration guide</h1>
+  <p>How to consume, query, and convert Nostr kind 30142 / AMB educational metadata from the Edufeed data pool.</p>
+</header>
+
+<!-- ===== Section 1: What's stored ===================================== -->
+<section>
+  <h2>1. What is stored <span class="pill">kind 30142</span></h2>
+  <p>
+    Each educational resource is stored as a Nostr <strong>addressable event</strong> of kind <code>30142</code>, implementing the
+    <a href="https://dini-ag-kim.github.io/amb/latest/" target="_blank" rel="noopener">Allgemeines Metadatenprofil für Bildungsressourcen (AMB)</a>.
+    An event is uniquely identified by its three-part coordinate <code>kind:pubkey:d-tag</code> — the <code>d</code> tag typically holds the
+    canonical resource URL. Metadata is stored as flat Nostr tags using <code>:</code> as a nesting delimiter.
+  </p>
+
+  <table class="mapping-table">
+    <thead>
+      <tr>
+        <th>AMB property</th>
+        <th>Nostr tag(s)</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>id</code></td>
+        <td><code>["d", &lt;uri&gt;]</code></td>
+        <td class="note">Stable identifier, usually the content URL</td>
+      </tr>
+      <tr>
+        <td><code>name</code></td>
+        <td><code>["name", &lt;title&gt;]</code></td>
+        <td class="note">Human-readable title</td>
+      </tr>
+      <tr>
+        <td><code>description</code></td>
+        <td><code>["description", &lt;text&gt;]</code> + <code>content</code> field</td>
+        <td class="note">Stored in both places; clients prefer <code>content</code> field</td>
+      </tr>
+      <tr>
+        <td><code>keywords</code></td>
+        <td><code>["t", &lt;keyword&gt;]</code> (repeated)</td>
+        <td class="note">Nostr-native keyword tag</td>
+      </tr>
+      <tr>
+        <td><code>about</code> (concept)</td>
+        <td>
+          <code>["about:id", &lt;uri&gt;]</code><br>
+          <code>["about:prefLabel:&lt;lang&gt;", &lt;label&gt;]</code><br>
+          <code>["about:type", "Concept"]</code>
+        </td>
+        <td class="note">Repeated for each subject; multiple about-groups are co-indexed by tag order</td>
+      </tr>
+      <tr>
+        <td><code>learningResourceType</code> (concept)</td>
+        <td>
+          <code>["learningResourceType:id", &lt;uri&gt;]</code><br>
+          <code>["learningResourceType:prefLabel:&lt;lang&gt;", &lt;label&gt;]</code><br>
+          <code>["learningResourceType:type", "Concept"]</code>
+        </td>
+        <td class="note">Repeated for each type</td>
+      </tr>
+      <tr>
+        <td><code>creator</code> — with Nostr identity</td>
+        <td><code>["p", &lt;pubkey-hex&gt;, &lt;relay-hint&gt;, "creator"]</code></td>
+        <td class="note">Only <code>p</code> tag is emitted; name resolved from kind:0 profile</td>
+      </tr>
+      <tr>
+        <td><code>creator</code> — external (no Nostr pubkey)</td>
+        <td>
+          <code>["creator:name", &lt;name&gt;]</code><br>
+          <code>["creator:id", &lt;uri&gt;]</code> (optional, e.g. ORCID)<br>
+          <code>["creator:type", "Person"|"Organization"]</code>
+        </td>
+        <td class="note">Same structure for <code>contributor</code>, <code>publisher</code></td>
+      </tr>
+      <tr>
+        <td><code>isBasedOn</code> / <code>isPartOf</code> / <code>hasPart</code></td>
+        <td>
+          Nostr resource: <code>["a", "30142:&lt;pubkey&gt;:&lt;d&gt;", &lt;relay&gt;, &lt;role&gt;]</code><br>
+          External URI: <code>["isBasedOn:id", &lt;uri&gt;]</code> etc.
+        </td>
+        <td class="note">Role is the property name, e.g. <code>"isBasedOn"</code></td>
+      </tr>
+      <tr>
+        <td>External references ("see also")</td>
+        <td><code>["r", &lt;url&gt;]</code> (repeated)</td>
+        <td class="note">DOI, ISBN, OERSI source URL — Nostr-native NIP-24; no AMB equivalent on reverse conversion</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p style="margin-top:16px;"><strong>Extension namespaces</strong> — properties outside the AMB-core spec use an <code>ext</code> prefix so they coexist without collision:</p>
+  <ul style="margin:0 0 12px; font-size:13.5px;">
+    <li>
+      <code>ext:ekw:&lt;facet&gt;:&lt;sub&gt;</code> — EKW vocabulary (e.g. <code>ext:ekw:gradeLevel:id</code>, <code>ext:ekw:bistum:prefLabel:de</code>).
+      <code>&lt;sub&gt;</code> is one of <code>id</code>, <code>type</code>, <code>prefLabel:&lt;lang&gt;</code>, <code>name</code>.
+    </li>
+    <li>
+      <code>ext:&lt;d-slug&gt;:&lt;facet&gt;:&lt;sub&gt;</code> — per-community metadata form fields where <code>&lt;d-slug&gt;</code>
+      is the <code>d</code>-tag of the kind 30168 form (colon-free). The form event itself is referenced via
+      <code>["a", "30168:&lt;pub&gt;:&lt;d&gt;", &lt;relay&gt;, "form"]</code>.
+    </li>
+  </ul>
+</section>
+
+<!-- ===== Section 2: How data enters =================================== -->
+<section>
+  <h2>2. How data enters the pool</h2>
+  <p>
+    Kind 30142 events are produced by any Nostr client that holds the author's private key:
+  </p>
+  <ul style="font-size:13.5px; margin:0 0 12px;">
+    <li><strong>Edufeed resource form</strong> — a guided wizard in the Edufeed web app that maps form fields to the AMB tag structure and signs the event client-side via NIP-07 (browser extension) or NIP-46 (remote signer).</li>
+    <li><strong>EKW wizard</strong> — a community-specific form with EKW vocabulary fields (<code>ext:ekw:*</code>).</li>
+    <li><strong>Sitemap / pipeline import</strong> — automated tools fetch OER catalogue sitemaps, convert each record to a kind 30142 event, and publish in bulk to the AMB relay.</li>
+  </ul>
+  <p>
+    After signing, the event is published to the Edufeed AMB relay (<code>wss://amb-relay.edufeed.org</code>)
+    using standard Nostr <code>EVENT</code> messages. Any Nostr client that knows the author's pubkey can also
+    publish replacements or deletions.
+  </p>
+</section>
+
+<!-- ===== Section 3: Storage location ================================== -->
+<section>
+  <h2>3. Does storage location matter?</h2>
+  <p>
+    No — the canonical address of a resource is its coordinate <code>30142:&lt;pubkey&gt;:&lt;d-tag&gt;</code>, which is
+    location-independent. The same signed event can be stored on any number of relays simultaneously.
+    The Edufeed AMB relay (<code>wss://amb-relay.edufeed.org</code>) is the primary index, but clients
+    are free to mirror or query elsewhere.
+  </p>
+  <p>Query using standard <strong>NIP-01 filters</strong>:</p>
+  <pre><code>// All AMB events (up to relay limit)
+{"kinds": [30142]}
+
+// Specific resource by coordinate
+{"kinds": [30142], "authors": ["&lt;pubkey-hex&gt;"], "#d": ["&lt;d-tag-value&gt;"]}
+
+// Filter by subject URI (AMB tag filter)
+{"kinds": [30142], "#about:id": ["https://w3id.org/kim/schulfaecher/s1009"]}
+
+// Filter by resource type URI
+{"kinds": [30142], "#learningResourceType:id": ["https://w3id.org/openeduhub/vocabs/new_lrt/video"]}
+
+// Filter by EKW extension property
+{"kinds": [30142], "#ext:ekw:gradeLevel:id": ["https://example.org/grade/5"]}</code></pre>
+
+  <p>Query using <strong>NIP-50 full-text search</strong> (supported by <code>amb-relay.edufeed.org</code>):</p>
+  <pre><code>// Free-text search across name, description, keywords
+{"kinds": [30142], "search": "pythagorean theorem"}
+
+// Field-specific filter via dot-notation
+{"kinds": [30142], "search": "publisher.name:e-teaching.org"}
+
+// Combined: free text + field filter
+{"kinds": [30142], "search": "forschung about.prefLabel.de:Mathematik"}
+
+// Extension property filter in NIP-50 search
+{"kinds": [30142], "search": "ext.ekw.gradeLevel.prefLabel.de:Klasse 5"}</code></pre>
+</section>
+
+<!-- ===== Section 4: Updates & deletions =============================== -->
+<section>
+  <h2>4. How events are updated or deleted</h2>
+  <p>
+    Kind 30142 is an <strong>addressable (parameterized replaceable) event</strong>. When a client publishes a new
+    event with the same <code>(kind, pubkey, d-tag)</code> triple, relays keep only the newest
+    <code>created_at</code>; older versions are superseded automatically. There is no explicit "patch" step —
+    the author simply re-publishes the full updated event.
+  </p>
+  <p>
+    <strong>Deletion</strong> uses NIP-09 (kind 5): the author publishes a deletion event referencing the
+    addressable coordinate as an <code>a</code> tag:
+  </p>
+  <pre><code>// NIP-09 deletion event
+{
+  "kind": 5,
+  "tags": [
+    ["a", "30142:&lt;pubkey&gt;:&lt;d-tag-value&gt;", "&lt;relay-hint&gt;"]
+  ],
+  "content": "Resource removed"
+}</code></pre>
+  <p>
+    Relays that honour NIP-09 will stop serving the referenced event. Clients that implement deletion-aware
+    models will filter it from results automatically.
+  </p>
+</section>
+
+<!-- ===== Section 5: Categorisation / vocabularies ===================== -->
+<section>
+  <h2>5. Categorisation and controlled vocabularies</h2>
+  <p>
+    Classification uses SKOS-aligned <strong>controlled vocabularies</strong>. Every concept carries its vocabulary URI
+    (<code>:id</code>), a human-readable label (<code>:prefLabel:&lt;lang&gt;</code>), and the type marker
+    (<code>:type = "Concept"</code>). Multiple concepts in the same field are stored as repeated tag groups
+    (boundary on repeated <code>:id</code>).
+  </p>
+  <table class="mapping-table">
+    <thead>
+      <tr>
+        <th>AMB field</th>
+        <th>Tag prefix</th>
+        <th>Example vocabulary</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>about</code> — subject</td>
+        <td><code>about:id</code> / <code>about:prefLabel:de</code></td>
+        <td><a href="https://w3id.org/kim/schulfaecher/" target="_blank" rel="noopener">Schulfächer (Kim)</a></td>
+      </tr>
+      <tr>
+        <td><code>learningResourceType</code></td>
+        <td><code>learningResourceType:id</code> / <code>:prefLabel:de</code></td>
+        <td><a href="https://w3id.org/openeduhub/vocabs/new_lrt/" target="_blank" rel="noopener">hcrt / new_lrt</a></td>
+      </tr>
+      <tr>
+        <td><code>audience</code></td>
+        <td><code>audience:id</code> / <code>:prefLabel:de</code></td>
+        <td><a href="https://w3id.org/kim/audience/" target="_blank" rel="noopener">LRMI audience vocab</a></td>
+      </tr>
+      <tr>
+        <td><code>educationalLevel</code></td>
+        <td><code>educationalLevel:id</code> / <code>:prefLabel:de</code></td>
+        <td><a href="https://w3id.org/kim/educationalLevel/" target="_blank" rel="noopener">Kim educationalLevel</a></td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+    Domain-specific facets are stored in <strong>ext namespaces</strong> — see Section 1 above. The EKW namespace
+    (<code>ext:ekw:*</code>) carries grade levels (<code>gradeLevel</code>), diocese (<code>bistum</code>),
+    Bible references (<code>bibelstelle</code>), and other EKW-specific fields. Per-community metadata forms
+    add further namespaces under <code>ext:&lt;form-d-slug&gt;:*</code>.
+  </p>
+</section>
+
+<!-- ===== Section 6: Converter / widget ================================ -->
+<section>
+  <h2>6. Convert events back to plain JSON (AMB)</h2>
+  <p>
+    The <code>amb-nostr-converter</code> library can reconstruct an AMB JSON document from any kind 30142 event.
+    It reverses the tag-flattening, re-groups concept arrays, maps <code>p</code> tags to
+    <code>creator</code>/<code>contributor</code>, maps <code>a</code> tags to relation objects, and surfaces
+    <code>ext:*</code> tags under a sibling <code>ext</code> object in the output.
+  </p>
+  <p>CLI usage (requires Node.js):</p>
+  <pre><code>amb-convert nostr:amb event.json</code></pre>
+
+  <p>Or use the live widget below — paste a kind 30142 JSON event on the left and click <strong>Nostr → AMB</strong> to
+  reconstruct the AMB document. Use <strong>AMB → Nostr</strong> to go the other way.</p>
+
+  <div class="controls">
+    <button id="toAmb">Nostr → AMB</button>
+    <button class="secondary" id="toNostr">AMB → Nostr</button>
+  </div>
+
+  <div class="widget-row">
+    <div>
+      <div class="widget-label">Nostr event JSON (kind 30142)</div>
+      <textarea id="inp" spellcheck="false"></textarea>
+    </div>
+    <div>
+      <div class="widget-label">Reconstructed AMB JSON</div>
+      <textarea id="out" spellcheck="false" placeholder="Output will appear here…"></textarea>
+    </div>
+  </div>
+</section>
+
+<hr class="sep">
+<p class="small">Standalone — no build step, no external network requests. Requires a browser that supports ES modules.</p>
+
+</div>
+
+<script type="module">
+  import { nostrToAmb, ambToNostr } from './amb-nostr-converter.esm.js';
+  const left = document.getElementById('inp');
+  const right = document.getElementById('out');
+  const EXAMPLE = {
+    kind: 30142, pubkey: '0'.repeat(64), created_at: 1700000000,
+    content: 'Eine Unterrichtseinheit zur Schöpfung.',
+    tags: [
+      ['d', 'https://example.org/material/42'],
+      ['name', 'Schöpfung'],
+      ['type', 'LearningResource'],
+      ['about:id', 'https://w3id.org/kim/schulfaecher/s1009'],
+      ['about:prefLabel:de', 'Religion'],
+      ['ext:ekw:gradeLevel:id', 'https://example.org/grade/5'],
+      ['ext:ekw:gradeLevel:prefLabel:de', 'Klasse 5'],
+      ['ext:ekw:gradeLevel:type', 'Concept'],
+    ],
+  };
+  left.value = JSON.stringify(EXAMPLE, null, 2);
+  document.getElementById('toAmb').onclick = () => {
+    try { const r = nostrToAmb(JSON.parse(left.value));
+      right.value = r.success ? JSON.stringify(r.data, null, 2) : 'Error: ' + r.error.message;
+    } catch (e) { right.value = 'Invalid JSON: ' + e.message; }
+  };
+  document.getElementById('toNostr').onclick = () => {
+    try { const r = ambToNostr(JSON.parse(right.value || left.value), { pubkey: '0'.repeat(64) });
+      right.value = r.success ? JSON.stringify(r.data, null, 2) : 'Error: ' + r.error.message;
+    } catch (e) { right.value = 'Invalid JSON: ' + e.message; }
+  };
+</script>
+</body>
+</html>
