@@ -80,6 +80,18 @@
   /* Misc */
   hr.sep { border: 0; border-top: 1px solid var(--border); margin: 24px 0; }
   .small { font-size: 12.5px; color: var(--muted); }
+
+  /* Live EKW feed */
+  .ekw-list { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); margin-top: 14px; }
+  .ekw-card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; box-shadow: var(--shadow); }
+  .ekw-card h3 { margin: 0 0 6px; font-size: 14.5px; line-height: 1.35; }
+  .ekw-card h3 a { color: var(--text); text-decoration: none; }
+  .ekw-card h3 a:hover { color: var(--accent); }
+  .ekw-card .desc { color: var(--muted); font-size: 12.5px; margin: 0 0 10px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .ekw-card .chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  .chip { display: inline-flex; align-items: baseline; gap: 4px; font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+  .chip b { font-weight: 600; opacity: .7; font-size: 9.5px; text-transform: uppercase; letter-spacing: .04em; }
+  .chip.free { background: var(--panel-2); color: var(--accent-2); }
 </style>
 </head>
 <body>
@@ -180,8 +192,10 @@
   <p style="margin-top:16px;"><strong>Extension namespaces</strong> — properties outside the AMB-core spec use an <code>ext</code> prefix so they coexist without collision:</p>
   <ul style="margin:0 0 12px; font-size:13.5px;">
     <li>
-      <code>ext:ekw:&lt;facet&gt;:&lt;sub&gt;</code> — EKW vocabulary (e.g. <code>ext:ekw:gradeLevel:id</code>, <code>ext:ekw:bistum:prefLabel:de</code>).
+      <code>ext:ekw:&lt;facet&gt;:&lt;sub&gt;</code> — EKW vocabulary (e.g. <code>ext:ekw:gradeLevel:id</code>, <code>ext:ekw:method:prefLabel:de</code>).
       <code>&lt;sub&gt;</code> is one of <code>id</code>, <code>type</code>, <code>prefLabel:&lt;lang&gt;</code>, <code>name</code>.
+      Free-text facets (<code>ext:ekw:methodOther</code>, <code>ext:ekw:bibleReference</code>) are bare key/value tags with no <code>:sub</code> suffix.
+      The full facet list and their vocabularies are in <a href="#ekw-vocabs">Section&nbsp;5</a>.
     </li>
     <li>
       <code>ext:&lt;d-slug&gt;:&lt;facet&gt;:&lt;sub&gt;</code> — per-community metadata form fields where <code>&lt;d-slug&gt;</code>
@@ -315,11 +329,76 @@
       </tr>
     </tbody>
   </table>
+  <h3 id="ekw-vocabs" style="font-size:16px; margin:24px 0 8px;">EKW extension vocabularies</h3>
   <p>
-    Domain-specific facets are stored in <strong>ext namespaces</strong> — see Section 1 above. The EKW namespace
-    (<code>ext:ekw:*</code>) carries grade levels (<code>gradeLevel</code>), diocese (<code>bistum</code>),
-    Bible references (<code>bibelstelle</code>), and other EKW-specific fields. Per-community metadata forms
-    add further namespaces under <code>ext:&lt;form-d-slug&gt;:*</code>.
+    The <strong>EKW</strong> (<em>Einfach Konkret Wirksam</em>) profile adds domain-specific facets under the
+    <code>ext:ekw:*</code> namespace, plus three EKW-specific replacements for AMB-core vocabularies. All of these
+    vocabularies are published as Nostr concept schemes (kind <code>39737</code>, individual concepts kind
+    <code>39738</code>) by <strong>VocabulOER</strong>
+    (<code>npub16f5fut6…</code>) and are browsable on Edufeed's vocabulary tool,
+    <a href="https://nocabs.edufeed.org" target="_blank" rel="noopener">nocabs.edufeed.org</a>. Concept <code>:id</code>
+    values on EKW events are therefore Nostr-native coordinates (<code>nostr:39738:&lt;vocab-pubkey&gt;:&lt;concept-d&gt;</code>),
+    not HTTP URIs.
+  </p>
+  <table class="mapping-table">
+    <thead>
+      <tr>
+        <th>EKW field</th>
+        <th>Tag key(s)</th>
+        <th>Vocabulary</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>gradeLevel</code></td>
+        <td><code>ext:ekw:gradeLevel:id</code> / <code>:prefLabel:de</code> / <code>:type</code></td>
+        <td><a href="https://nocabs.edufeed.org/vocab/npub16f5fut6pm2lm49fa5fn9t22vu24yuq5u8qlwjgwx5n02l2ue5cfqk7kc0l/klassenstufen" target="_blank" rel="noopener">Klassenstufen</a></td>
+      </tr>
+      <tr>
+        <td><code>schoolType</code></td>
+        <td><code>ext:ekw:schoolType:id</code> / <code>:prefLabel:de</code> / <code>:type</code></td>
+        <td><a href="https://nocabs.edufeed.org/vocab/npub16f5fut6pm2lm49fa5fn9t22vu24yuq5u8qlwjgwx5n02l2ue5cfqk7kc0l/schulart" target="_blank" rel="noopener">Schulart</a></td>
+      </tr>
+      <tr>
+        <td><code>didacticConcept</code></td>
+        <td><code>ext:ekw:didacticConcept:id</code> / <code>:prefLabel:de</code> / <code>:type</code></td>
+        <td><a href="https://nocabs.edufeed.org/vocab/npub16f5fut6pm2lm49fa5fn9t22vu24yuq5u8qlwjgwx5n02l2ue5cfqk7kc0l/didaktisches-konzept" target="_blank" rel="noopener">Didaktisches Konzept</a></td>
+      </tr>
+      <tr>
+        <td><code>method</code></td>
+        <td><code>ext:ekw:method:id</code> / <code>:prefLabel:de</code> / <code>:type</code></td>
+        <td><a href="https://nocabs.edufeed.org/vocab/npub16f5fut6pm2lm49fa5fn9t22vu24yuq5u8qlwjgwx5n02l2ue5cfqk7kc0l/methode" target="_blank" rel="noopener">Methode</a></td>
+      </tr>
+      <tr>
+        <td><code>methodOther</code></td>
+        <td><code>ext:ekw:methodOther</code> (bare value, repeated)</td>
+        <td class="note">Free text — author-supplied method not in the vocabulary</td>
+      </tr>
+      <tr>
+        <td><code>bibleReference</code></td>
+        <td><code>ext:ekw:bibleReference</code> (bare value, repeated)</td>
+        <td class="note">Free text — e.g. <code>Gen 1</code>, <code>Ps 104</code></td>
+      </tr>
+      <tr>
+        <td><code>about</code> — subject <span class="note">(EKW-core)</span></td>
+        <td><code>about:id</code> / <code>about:prefLabel:de</code></td>
+        <td><a href="https://nocabs.edufeed.org/vocab/npub16f5fut6pm2lm49fa5fn9t22vu24yuq5u8qlwjgwx5n02l2ue5cfqk7kc0l/ekw-fach" target="_blank" rel="noopener">EKW Fach</a></td>
+      </tr>
+      <tr>
+        <td><code>learningResourceType</code> <span class="note">(EKW-core)</span></td>
+        <td><code>learningResourceType:id</code> / <code>:prefLabel:de</code></td>
+        <td><a href="https://nocabs.edufeed.org/vocab/npub16f5fut6pm2lm49fa5fn9t22vu24yuq5u8qlwjgwx5n02l2ue5cfqk7kc0l/ekw-lrt" target="_blank" rel="noopener">EKW LRT</a></td>
+      </tr>
+      <tr>
+        <td><code>keywords</code> <span class="note">(EKW-core)</span></td>
+        <td><code>t</code> (Nostr-native, repeated)</td>
+        <td><a href="https://nocabs.edufeed.org/vocab/npub16f5fut6pm2lm49fa5fn9t22vu24yuq5u8qlwjgwx5n02l2ue5cfqk7kc0l/ekw-keywords" target="_blank" rel="noopener">EKW Keywords</a></td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="small">
+    Per-community metadata forms add further namespaces under <code>ext:&lt;form-d-slug&gt;:*</code> (kind 30168 forms),
+    referenced from the resource via <code>["a", "30168:&lt;pub&gt;:&lt;d&gt;", &lt;relay&gt;, "form"]</code>.
   </p>
 </section>
 
@@ -355,8 +434,27 @@
   </div>
 </section>
 
+<!-- ===== Section 7: Live EKW feed ==================================== -->
+<section>
+  <h2>7. Live: EKW resources from the relay <span class="pill">kind 30142</span></h2>
+  <p>
+    The cards below are fetched live from <code>wss://amb-relay.edufeed.org</code> at page load — a direct Nostr
+    <code>REQ</code> for kind 30142 events authored by the EKW publisher
+    (<code>npub1wak8hljj…</code>), the same query any client would use. Each card shows the
+    resource title, description, and the <code>ext:ekw:*</code> facets it carries.
+  </p>
+  <div class="controls">
+    <button id="ekwReload">Reload from relay</button>
+    <span class="status" id="ekwStatus"><span class="dot"></span><span id="ekwStatusText">idle</span></span>
+  </div>
+  <div class="ekw-list" id="ekwList"></div>
+</section>
+
 <hr class="sep">
-<p class="small">Standalone — no build step, no external network requests. Requires a browser that supports ES modules.</p>
+<p class="small">
+  The converter widget (Section 6) runs entirely offline. The live feed (Section 7) opens one WebSocket to
+  <code>wss://amb-relay.edufeed.org</code>. Requires a browser that supports ES modules.
+</p>
 
 </div>
 
@@ -389,6 +487,116 @@
       right.value = r.success ? JSON.stringify(r.data, null, 2) : 'Error: ' + r.error.message;
     } catch (e) { right.value = 'Invalid JSON: ' + e.message; }
   };
+</script>
+
+<!-- ===== Live EKW relay feed ========================================= -->
+<script>
+  // Plain Nostr REQ over WebSocket — no dependencies. Renders live EKW
+  // (kind 30142) resources authored by the EKW publisher.
+  const EKW_RELAY = 'wss://amb-relay.edufeed.org';
+  const EKW_PUBKEY = '776c7bfe528c041cd1114efb6d48100b2e49d4faf27e301fb3f83c64a28694f4';
+
+  const listEl = document.getElementById('ekwList');
+  const statusEl = document.getElementById('ekwStatus');
+  const statusText = document.getElementById('ekwStatusText');
+
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  function setStatus(state, text) {
+    statusEl.className = 'status' + (state ? ' ' + state : '');
+    statusText.textContent = text;
+  }
+
+  function tagVal(tags, key) {
+    const t = tags.find((x) => x[0] === key);
+    return t ? t[1] : '';
+  }
+
+  // Collect distinct ext:ekw facet chips. Concept facets use the
+  // prefLabel:de value; bare facets (methodOther, bibleReference) use the value.
+  function ekwChips(tags) {
+    const chips = [];
+    const seen = new Set();
+    for (const t of tags) {
+      const k = t[0];
+      if (!k || !k.startsWith('ext:ekw:')) continue;
+      const parts = k.slice('ext:ekw:'.length).split(':');
+      const facet = parts[0];
+      let label, free = false;
+      if (parts.length === 1) { label = t[1]; free = true; }
+      else if (parts[1] === 'prefLabel') { label = t[1]; }
+      else continue; // skip :id and :type rows
+      if (!label) continue;
+      const key = facet + '|' + label;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      chips.push({ facet, label, free });
+    }
+    return chips;
+  }
+
+  function render(events) {
+    events.sort((a, b) => b.created_at - a.created_at);
+    if (!events.length) {
+      listEl.innerHTML = '<p class="small">No EKW resources returned by the relay.</p>';
+      return;
+    }
+    listEl.innerHTML = events.map((ev) => {
+      const name = tagVal(ev.tags, 'name') || tagVal(ev.tags, 'd') || '(untitled)';
+      const d = tagVal(ev.tags, 'd');
+      const descRaw = (ev.content && ev.content.trim()) || tagVal(ev.tags, 'description') || '';
+      const desc = descRaw.length > 220 ? descRaw.slice(0, 220) + '…' : descRaw;
+      const title = /^https?:\/\//.test(d)
+        ? '<a href="' + esc(d) + '" target="_blank" rel="noopener">' + esc(name) + '</a>'
+        : esc(name);
+      const chips = ekwChips(ev.tags).map((c) =>
+        '<span class="chip' + (c.free ? ' free' : '') + '"><b>' + esc(c.facet) + '</b>' + esc(c.label) + '</span>'
+      ).join('');
+      return '<div class="ekw-card"><h3>' + title + '</h3>'
+        + (desc ? '<p class="desc">' + esc(desc) + '</p>' : '')
+        + '<div class="chips">' + chips + '</div></div>';
+    }).join('');
+  }
+
+  let ws;
+  function loadEkw() {
+    if (ws) { try { ws.close(); } catch (e) {} }
+    listEl.innerHTML = '';
+    setStatus('', 'connecting…');
+    const events = [];
+    const subId = 'ekw' + Math.random().toString(36).slice(2, 8);
+    let settled = false;
+    const finish = (state, text) => {
+      if (settled) return;
+      settled = true;
+      setStatus(state, text);
+      render(events);
+      try { ws.close(); } catch (e) {}
+    };
+    const timeout = setTimeout(() => finish('connected', events.length + ' resources (timeout)'), 6000);
+    try {
+      ws = new WebSocket(EKW_RELAY);
+    } catch (e) {
+      clearTimeout(timeout);
+      setStatus('error', 'connection failed');
+      return;
+    }
+    ws.onopen = () => {
+      setStatus('connected', 'querying…');
+      ws.send(JSON.stringify(['REQ', subId, { kinds: [30142], authors: [EKW_PUBKEY], limit: 24 }]));
+    };
+    ws.onmessage = (e) => {
+      let m;
+      try { m = JSON.parse(e.data); } catch (err) { return; }
+      if (m[0] === 'EVENT' && m[1] === subId) events.push(m[2]);
+      else if (m[0] === 'EOSE' && m[1] === subId) { clearTimeout(timeout); finish('connected', events.length + ' resources'); }
+    };
+    ws.onerror = () => { clearTimeout(timeout); setStatus('error', 'relay error'); };
+  }
+
+  document.getElementById('ekwReload').onclick = loadEkw;
+  loadEkw();
 </script>
 </body>
 </html>
