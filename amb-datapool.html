@@ -452,6 +452,19 @@
       <textarea id="out" spellcheck="false" placeholder="Output will appear here…"></textarea>
     </div>
   </div>
+
+  <hr class="sep">
+  <p class="small" style="margin-bottom:8px;">
+    <strong>Fetch a specific event</strong> from <code>wss://amb-relay.edufeed.org</code> and load it into the
+    converter above. Enter a 64-character hex <strong>event id</strong>, or an addressable
+    <strong>coordinate</strong> <code>kind:pubkey:d-tag</code> (e.g. <code>30142:&lt;pubkey-hex&gt;:&lt;d-tag&gt;</code>).
+  </p>
+  <div class="controls">
+    <input id="qInput" type="text" spellcheck="false" placeholder="event id (64-hex)  —or—  30142:pubkey:d-tag"
+      style="flex:1 1 320px; min-width:0;">
+    <button id="qFetch">Fetch &amp; convert</button>
+    <span class="status" id="qStatus"><span class="dot"></span><span id="qStatusText">idle</span></span>
+  </div>
 </section>
 
 <!-- ===== Section 7: Live EKW feed ==================================== -->
@@ -8538,6 +8551,58 @@ window.__ambConv = { ambToNostr, nostrToAmb };
   // The live feed (Section 7) shares its fetched events here.
   document.addEventListener('ekw-events', (e) => addLiveEvents(e.detail || []));
   if (window.__ekwLiveEvents) addLiveEvents(window.__ekwLiveEvents);
+
+  // ---- Fetch a specific event from the relay and load it into the converter ----
+  const QUERY_RELAY = 'wss://amb-relay.edufeed.org';
+  const qInput = document.getElementById('qInput');
+  const qStatusEl = document.getElementById('qStatus');
+  const qStatusText = document.getElementById('qStatusText');
+
+  function setQStatus(state, text) {
+    qStatusEl.className = 'status' + (state ? ' ' + state : '');
+    qStatusText.textContent = text;
+  }
+
+  // Accept a 64-hex event id, or an addressable coordinate kind:pubkey:d-tag
+  // (the d-tag may itself contain ':' — e.g. a URL — so it is the unbounded rest).
+  function buildFilter(raw) {
+    const q = (raw || '').trim();
+    if (/^[0-9a-f]{64}$/i.test(q)) return { ids: [q.toLowerCase()] };
+    const m = q.match(/^(\d+):([0-9a-f]{64}):(.*)$/i);
+    if (m) return { kinds: [Number(m[1])], authors: [m[2].toLowerCase()], '#d': [m[3]] };
+    return null;
+  }
+
+  function fetchEvent(filter) {
+    return new Promise((resolve) => {
+      let ws, settled = false, best = null;
+      const subId = 'q' + Math.random().toString(36).slice(2, 8);
+      const done = () => { if (settled) return; settled = true; try { ws.close(); } catch (e) {} resolve(best); };
+      const to = setTimeout(done, 6000);
+      try { ws = new WebSocket(QUERY_RELAY); } catch (e) { clearTimeout(to); resolve(null); return; }
+      ws.onopen = () => ws.send(JSON.stringify(['REQ', subId, Object.assign({ limit: 1 }, filter)]));
+      ws.onmessage = (e) => {
+        let m; try { m = JSON.parse(e.data); } catch (_) { return; }
+        if (m[0] === 'EVENT' && m[1] === subId) { if (!best || m[2].created_at > best.created_at) best = m[2]; }
+        else if (m[0] === 'EOSE' && m[1] === subId) { clearTimeout(to); done(); }
+      };
+      ws.onerror = () => { clearTimeout(to); done(); };
+    });
+  }
+
+  async function runQuery() {
+    const filter = buildFilter(qInput.value);
+    if (!filter) { setQStatus('error', 'enter a 64-hex id or kind:pubkey:d-tag'); return; }
+    setQStatus('', 'querying…');
+    const ev = await fetchEvent(filter);
+    if (!ev) { setQStatus('error', 'not found on relay'); return; }
+    left.value = JSON.stringify(ev, null, 2);
+    runToAmb();
+    setQStatus('connected', 'loaded ' + (ev.id ? ev.id.slice(0, 8) + '…' : 'event'));
+  }
+
+  document.getElementById('qFetch').onclick = runQuery;
+  qInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); runQuery(); } });
 
   // Preload and convert the first sample.
   picker.value = 'static:0';
