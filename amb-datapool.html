@@ -456,11 +456,13 @@
   <hr class="sep">
   <p class="small" style="margin-bottom:8px;">
     <strong>Fetch a specific event</strong> from <code>wss://amb-relay.edufeed.org</code> and load it into the
-    converter above. Enter a 64-character hex <strong>event id</strong>, or an addressable
-    <strong>coordinate</strong> <code>kind:pubkey:d-tag</code> (e.g. <code>30142:&lt;pubkey-hex&gt;:&lt;d-tag&gt;</code>).
+    converter above. Accepts a 64-character hex <strong>event id</strong>, an addressable
+    <strong>coordinate</strong> <code>kind:pubkey:d-tag</code>, or a
+    <a href="https://github.com/nostr-protocol/nips/blob/master/19.md" target="_blank" rel="noopener">NIP-19</a>
+    <code>naddr</code>, <code>nevent</code>, or <code>note</code> identifier (with or without a <code>nostr:</code> prefix).
   </p>
   <div class="controls">
-    <input id="qInput" type="text" spellcheck="false" placeholder="event id (64-hex)  —or—  30142:pubkey:d-tag"
+    <input id="qInput" type="text" spellcheck="false" placeholder="naddr1… · nevent1… · note1… · 64-hex id · 30142:pubkey:d-tag"
       style="flex:1 1 320px; min-width:0;">
     <button id="qFetch">Fetch &amp; convert</button>
     <span class="status" id="qStatus"><span class="dot"></span><span id="qStatusText">idle</span></span>
@@ -8563,11 +8565,71 @@ window.__ambConv = { ambToNostr, nostrToAmb };
     qStatusText.textContent = text;
   }
 
-  // Accept a 64-hex event id, or an addressable coordinate kind:pubkey:d-tag
-  // (the d-tag may itself contain ':' — e.g. a URL — so it is the unbounded rest).
+  // Minimal, dependency-free bech32 decoder + NIP-19 TLV parser so the page
+  // stays self-contained and works over file://.
+  const BECH32_CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
+  function bech32Decode(str) {
+    const s = str.toLowerCase();
+    const pos = s.lastIndexOf('1');
+    if (pos < 1) return null;
+    const prefix = s.slice(0, pos);
+    const dp = s.slice(pos + 1);
+    if (dp.length < 6) return null;
+    const data = [];
+    for (const ch of dp) { const v = BECH32_CHARSET.indexOf(ch); if (v === -1) return null; data.push(v); }
+    return { prefix, data };
+  }
+  function bech32Polymod(values) {
+    const GEN = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3];
+    let chk = 1;
+    for (const v of values) { const b = chk >>> 25; chk = ((chk & 0x1ffffff) << 5) ^ v; for (let i = 0; i < 5; i++) if ((b >> i) & 1) chk ^= GEN[i]; }
+    return chk;
+  }
+  function bech32HrpExpand(hrp) {
+    const out = [];
+    for (let i = 0; i < hrp.length; i++) out.push(hrp.charCodeAt(i) >> 5);
+    out.push(0);
+    for (let i = 0; i < hrp.length; i++) out.push(hrp.charCodeAt(i) & 31);
+    return out;
+  }
+  function fromWords(words) {
+    let acc = 0, bits = 0; const bytes = [];
+    for (const v of words) { acc = (acc << 5) | v; bits += 5; while (bits >= 8) { bits -= 8; bytes.push((acc >> bits) & 0xff); } }
+    return bytes;
+  }
+  function parseTLV(bytes) {
+    const r = {}; let i = 0;
+    while (i < bytes.length) { const t = bytes[i++]; const len = bytes[i++]; const val = bytes.slice(i, i + len); i += len; (r[t] = r[t] || []).push(val); }
+    return r;
+  }
+  const toHex = (arr) => arr.map((b) => b.toString(16).padStart(2, '0')).join('');
+  function filterFromBech32(input) {
+    const s = input.replace(/^nostr:/i, '');
+    const dec = bech32Decode(s);
+    if (!dec) throw 0;
+    if (bech32Polymod(bech32HrpExpand(dec.prefix).concat(dec.data)) !== 1) throw 0;
+    const bytes = fromWords(dec.data.slice(0, dec.data.length - 6));
+    if (dec.prefix === 'note') { if (bytes.length < 32) throw 0; return { ids: [toHex(bytes.slice(0, 32))] }; }
+    const tlv = parseTLV(bytes);
+    if (dec.prefix === 'nevent') { if (!tlv[0] || !tlv[0][0]) throw 0; return { ids: [toHex(tlv[0][0])] }; }
+    if (dec.prefix === 'naddr') {
+      if (!tlv[0] || !tlv[2] || !tlv[3]) throw 0;
+      const identifier = new TextDecoder().decode(new Uint8Array(tlv[0][0]));
+      const author = toHex(tlv[2][0]);
+      const k = tlv[3][0];
+      const kind = k[0] * 0x1000000 + k[1] * 0x10000 + k[2] * 0x100 + k[3];
+      return { kinds: [kind], authors: [author], '#d': [identifier] };
+    }
+    throw 0;
+  }
+
+  // Accept a 64-hex event id, an addressable coordinate kind:pubkey:d-tag
+  // (the d-tag may itself contain ':' — e.g. a URL — so it is the unbounded rest),
+  // or a NIP-19 naddr/nevent/note identifier (with or without a nostr: prefix).
   function buildFilter(raw) {
     const q = (raw || '').trim();
     if (/^[0-9a-f]{64}$/i.test(q)) return { ids: [q.toLowerCase()] };
+    if (/^(nostr:)?(naddr|nevent|note)1[0-9a-z]+$/i.test(q)) { try { return filterFromBech32(q); } catch (e) { return null; } }
     const m = q.match(/^(\d+):([0-9a-f]{64}):(.*)$/i);
     if (m) return { kinds: [Number(m[1])], authors: [m[2].toLowerCase()], '#d': [m[3]] };
     return null;
@@ -8592,7 +8654,7 @@ window.__ambConv = { ambToNostr, nostrToAmb };
 
   async function runQuery() {
     const filter = buildFilter(qInput.value);
-    if (!filter) { setQStatus('error', 'enter a 64-hex id or kind:pubkey:d-tag'); return; }
+    if (!filter) { setQStatus('error', 'enter a 64-hex id, kind:pubkey:d-tag, or naddr/nevent/note'); return; }
     setQStatus('', 'querying…');
     const ev = await fetchEvent(filter);
     if (!ev) { setQStatus('error', 'not found on relay'); return; }
