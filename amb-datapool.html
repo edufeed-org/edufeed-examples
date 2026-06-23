@@ -111,6 +111,22 @@
     An event is uniquely identified by its three-part coordinate <code>kind:pubkey:d-tag</code> — the <code>d</code> tag typically holds the
     canonical resource URL. Metadata is stored as flat Nostr tags using <code>:</code> as a nesting delimiter.
   </p>
+  <p>
+    <strong>What "addressable" means.</strong> Nostr defines four event-storage behaviours by kind range
+    (<a href="https://github.com/nostr-protocol/nips/blob/master/01.md" target="_blank" rel="noopener">NIP-01</a>):
+    <em>regular</em> events are kept indefinitely, <em>replaceable</em> events (kind <code>10000</code>–<code>19999</code>)
+    keep only the latest per <code>(kind, pubkey)</code>, and <strong>addressable</strong> events
+    (kind <code>30000</code>–<code>39999</code>, sometimes called <em>parameterized replaceable</em>) keep only the latest per
+    <code>(kind, pubkey, d-tag)</code>. Because the resource carries its own <code>d</code> identifier, one author can hold
+    arbitrarily many distinct kind <code>30142</code> resources, each independently replaceable in place — publishing the same
+    coordinate again overwrites the prior version rather than appending a duplicate. That stable coordinate is what makes a
+    resource <em>referenceable</em>: other events point at it with an <code>a</code> tag
+    (<code>"a", "30142:&lt;pubkey&gt;:&lt;d-tag&gt;"</code>) and it can be encoded as an
+    <a href="https://github.com/nostr-protocol/nips/blob/master/19.md" target="_blank" rel="noopener">NIP-19</a>
+    <code>naddr</code> for sharing. See the
+    <a href="https://github.com/nostr-protocol/nips/blob/master/01.md#kinds" target="_blank" rel="noopener">NIP-01 "Kinds" section</a>
+    for the authoritative range definitions.
+  </p>
 
   <table class="mapping-table">
     <thead>
@@ -414,10 +430,14 @@
   <p>CLI usage (requires Node.js):</p>
   <pre><code>amb-convert nostr:amb event.json</code></pre>
 
-  <p>Or use the live widget below — paste a kind 30142 JSON event on the left and click <strong>Nostr → AMB</strong> to
-  reconstruct the AMB document. Use <strong>AMB → Nostr</strong> to go the other way.</p>
+  <p>Or use the live widget below: pick a <strong>sample event</strong> — or one of the live EKW
+  resources fetched in <a href="#live-feed">Section 7</a> — from the dropdown, and it loads into the left
+  pane and converts automatically. Edit the JSON and click <strong>Nostr → AMB</strong> to re-run, or
+  <strong>AMB → Nostr</strong> to go the other way.</p>
 
   <div class="controls">
+    <label for="examplePicker" class="widget-label" style="margin:0 4px 0 0;align-self:center;">Example</label>
+    <select id="examplePicker"></select>
     <button id="toAmb">Nostr → AMB</button>
     <button class="secondary" id="toNostr">AMB → Nostr</button>
   </div>
@@ -435,7 +455,7 @@
 </section>
 
 <!-- ===== Section 7: Live EKW feed ==================================== -->
-<section>
+<section id="live-feed">
   <h2>7. Live: EKW resources from the relay <span class="pill">kind 30142</span></h2>
   <p>
     The cards below are fetched live from <code>wss://amb-relay.edufeed.org</code> at page load — a direct Nostr
@@ -462,31 +482,121 @@
   import { nostrToAmb, ambToNostr } from './amb-nostr-converter.esm.js';
   const left = document.getElementById('inp');
   const right = document.getElementById('out');
-  const EXAMPLE = {
-    kind: 30142, pubkey: '0'.repeat(64), created_at: 1700000000,
-    content: 'Eine Unterrichtseinheit zur Schöpfung.',
-    tags: [
-      ['d', 'https://example.org/material/42'],
-      ['name', 'Schöpfung'],
-      ['type', 'LearningResource'],
-      ['about:id', 'https://w3id.org/kim/schulfaecher/s1009'],
-      ['about:prefLabel:de', 'Religion'],
-      ['ext:ekw:gradeLevel:id', 'https://example.org/grade/5'],
-      ['ext:ekw:gradeLevel:prefLabel:de', 'Klasse 5'],
-      ['ext:ekw:gradeLevel:type', 'Concept'],
-    ],
+  const picker = document.getElementById('examplePicker');
+
+  // Curated sample events. The first shows ext:ekw concept facets; the second
+  // exercises the reverse-conversion features called out above: p → creator,
+  // a → relation, content → description, and r-tag exclusion.
+  const EXAMPLES = [
+    {
+      label: 'EKW unit — Schöpfung (concepts + ext)',
+      event: {
+        kind: 30142, pubkey: '0'.repeat(64), created_at: 1700000000,
+        content: 'Eine Unterrichtseinheit zur Schöpfung.',
+        tags: [
+          ['d', 'https://example.org/material/42'],
+          ['name', 'Schöpfung'],
+          ['type', 'LearningResource'],
+          ['about:id', 'https://w3id.org/kim/schulfaecher/s1009'],
+          ['about:prefLabel:de', 'Religion'],
+          ['ext:ekw:gradeLevel:id', 'https://example.org/grade/5'],
+          ['ext:ekw:gradeLevel:prefLabel:de', 'Klasse 5'],
+          ['ext:ekw:gradeLevel:type', 'Concept'],
+        ],
+      },
+    },
+    {
+      label: 'Creator (p), relation (a), description',
+      event: {
+        kind: 30142, pubkey: '0'.repeat(64), created_at: 1700000000,
+        content: 'A worksheet on photosynthesis for lower-secondary biology.',
+        tags: [
+          ['d', 'https://example.org/material/77'],
+          ['name', 'Photosynthesis worksheet'],
+          ['type', 'LearningResource'],
+          ['about:id', 'https://w3id.org/kim/schulfaecher/s1017'],
+          ['about:prefLabel:de', 'Biologie'],
+          ['about:type', 'Concept'],
+          ['learningResourceType:id', 'https://w3id.org/kim/hcrt/worksheet'],
+          ['learningResourceType:prefLabel:de', 'Arbeitsblatt'],
+          ['learningResourceType:type', 'Concept'],
+          ['creator:name', 'Maria Musterfrau'],
+          ['creator:type', 'Person'],
+          ['p', 'b'.repeat(64), 'wss://relay.edufeed.org', 'creator'],
+          ['a', '30142:' + 'c'.repeat(64) + ':https://example.org/material/12', 'wss://relay.edufeed.org', 'isBasedOn'],
+          ['r', 'https://example.org/external-source'],
+        ],
+      },
+    },
+  ];
+
+  const exampleEvents = new Map(); // option key -> event
+  let liveGroup;
+
+  const nameOf = (ev) => {
+    const t = (ev.tags || []).find((x) => x[0] === 'name') || (ev.tags || []).find((x) => x[0] === 'd');
+    return (t && t[1]) || '(untitled)';
   };
-  left.value = JSON.stringify(EXAMPLE, null, 2);
-  document.getElementById('toAmb').onclick = () => {
+
+  function runToAmb() {
     try { const r = nostrToAmb(JSON.parse(left.value));
       right.value = r.success ? JSON.stringify(r.data, null, 2) : 'Error: ' + r.error.message;
     } catch (e) { right.value = 'Invalid JSON: ' + e.message; }
-  };
-  document.getElementById('toNostr').onclick = () => {
+  }
+  function runToNostr() {
     try { const r = ambToNostr(JSON.parse(right.value || left.value), { pubkey: '0'.repeat(64) });
       right.value = r.success ? JSON.stringify(r.data, null, 2) : 'Error: ' + r.error.message;
     } catch (e) { right.value = 'Invalid JSON: ' + e.message; }
-  };
+  }
+
+  function loadSelected() {
+    const ev = exampleEvents.get(picker.value);
+    if (!ev) return;
+    left.value = JSON.stringify(ev, null, 2);
+    runToAmb();
+  }
+
+  function addLiveEvents(events) {
+    liveGroup.innerHTML = '';
+    events.slice().sort((a, b) => b.created_at - a.created_at).forEach((ev, i) => {
+      const key = 'live:' + i;
+      exampleEvents.set(key, ev);
+      const o = document.createElement('option');
+      o.value = key;
+      o.textContent = nameOf(ev);
+      liveGroup.appendChild(o);
+    });
+    liveGroup.hidden = events.length === 0;
+  }
+
+  // Build the picker: curated samples, then a (hidden until populated) live group.
+  const sampleGroup = document.createElement('optgroup');
+  sampleGroup.label = 'Sample events';
+  EXAMPLES.forEach((ex, i) => {
+    const key = 'static:' + i;
+    exampleEvents.set(key, ex.event);
+    const o = document.createElement('option');
+    o.value = key;
+    o.textContent = ex.label;
+    sampleGroup.appendChild(o);
+  });
+  picker.appendChild(sampleGroup);
+  liveGroup = document.createElement('optgroup');
+  liveGroup.label = 'Live from relay (Section 7)';
+  liveGroup.hidden = true;
+  picker.appendChild(liveGroup);
+
+  picker.onchange = loadSelected;
+  document.getElementById('toAmb').onclick = runToAmb;
+  document.getElementById('toNostr').onclick = runToNostr;
+
+  // The live feed (Section 7) shares its fetched events here.
+  document.addEventListener('ekw-events', (e) => addLiveEvents(e.detail || []));
+  if (window.__ekwLiveEvents) addLiveEvents(window.__ekwLiveEvents);
+
+  // Preload and convert the first sample.
+  picker.value = 'static:0';
+  loadSelected();
 </script>
 
 <!-- ===== Live EKW relay feed ========================================= -->
@@ -572,6 +682,8 @@
       settled = true;
       setStatus(state, text);
       render(events);
+      window.__ekwLiveEvents = events;
+      document.dispatchEvent(new CustomEvent('ekw-events', { detail: events }));
       try { ws.close(); } catch (e) {}
     };
     const timeout = setTimeout(() => finish('connected', events.length + ' resources (timeout)'), 6000);
