@@ -73,10 +73,10 @@ Scalar facets are also multi-valued — repeat the tag once per value.
 
 | Facet | Tag keys | Value | Cardinality | Vocabulary |
 |-------|----------|-------|-------------|------------|
-| **gradeLevel** | `ext:ekw:gradeLevel:{id,prefLabel:de,type}` | SKOS concept | multi | Klassenstufen |
-| **schoolType** | `ext:ekw:schoolType:{id,prefLabel:de,type}` | SKOS concept | multi | Schularten |
-| **didacticConcept** | `ext:ekw:didacticConcept:{id,prefLabel:de,type}` | SKOS concept | multi | Didaktische Konzepte |
-| **method** | `ext:ekw:method:{id,prefLabel:de,type}` | SKOS concept | multi | Methoden |
+| **gradeLevel** | `ext:ekw:gradeLevel:{id,prefLabel:de,type}` | SKOS concept | multi | [Klassenstufen](https://nocabs.edufeed.org/vocab/npub16f5fut6pm2lm49fa5fn9t22vu24yuq5u8qlwjgwx5n02l2ue5cfqk7kc0l/klassenstufen) |
+| **schoolType** | `ext:ekw:schoolType:{id,prefLabel:de,type}` | SKOS concept | multi | [Schularten](https://nocabs.edufeed.org/vocab/npub16f5fut6pm2lm49fa5fn9t22vu24yuq5u8qlwjgwx5n02l2ue5cfqk7kc0l/schulart) |
+| **didacticConcept** | `ext:ekw:didacticConcept:{id,prefLabel:de,type}` | SKOS concept | multi | [Didaktische Konzepte](https://nocabs.edufeed.org/vocab/npub16f5fut6pm2lm49fa5fn9t22vu24yuq5u8qlwjgwx5n02l2ue5cfqk7kc0l/didaktisches-konzept) |
+| **method** | `ext:ekw:method:{id,prefLabel:de,type}` | SKOS concept | multi | [Methoden](https://nocabs.edufeed.org/vocab/npub16f5fut6pm2lm49fa5fn9t22vu24yuq5u8qlwjgwx5n02l2ue5cfqk7kc0l/methode) |
 | **methodOther** | `ext:ekw:methodOther` | free text | multi | — |
 | **bibleReference** | `ext:ekw:bibleReference` | free text | multi | — |
 
@@ -94,6 +94,11 @@ The SKOS vocabularies are themselves Nostr-published concept schemes
 `id`s are URIs minted under `https://edufeed.org/v/...`, for example
 `https://edufeed.org/v/klassenstufen/5-6`.
 
+Each vocabulary can be browsed at
+[**nocabs.edufeed.org**](https://nocabs.edufeed.org) — Edufeed's Nostr vocabulary
+browser. The links in the **Vocabulary** columns above and below open the live
+concept scheme (its concepts, labels, and `id` URIs) for that facet.
+
 ---
 
 ## 3. Konfi sub-namespace (`ext:ekw:konfi:*`)
@@ -108,21 +113,21 @@ ext:ekw:konfi:<facet>...
 Same two shapes as above — concept triple (`:id` / `:prefLabel:de` / `:type`) for
 vocab facets, bare tag for scalar facets.
 
-| Facet | Tag keys | Value | Cardinality |
-|-------|----------|-------|-------------|
-| **zielgruppen** | `ext:ekw:konfi:zielgruppen:{id,prefLabel:de,type}` | SKOS concept | multi |
-| **lernformat** | `ext:ekw:konfi:lernformat:{id,prefLabel:de,type}` | SKOS concept | multi |
-| **zeitstruktur** | `ext:ekw:konfi:zeitstruktur:{id,prefLabel:de,type}` | SKOS concept | multi |
-| **beteiligte** | `ext:ekw:konfi:beteiligte:{id,prefLabel:de,type}` | SKOS concept | multi |
-| **themen** | `ext:ekw:konfi:themen:{id,prefLabel:de,type}` | SKOS concept | multi |
-| **dimensionen** | `ext:ekw:konfi:dimensionen:{id,prefLabel:de,type}` | SKOS concept | multi |
-| **methode** | `ext:ekw:konfi:methode:{id,prefLabel:de,type}` | SKOS concept | multi |
-| **materialaufwand** | `ext:ekw:konfi:materialaufwand:{id,prefLabel:de,type}` | SKOS concept | single |
-| **technikbedarf** | `ext:ekw:konfi:technikbedarf:{id,prefLabel:de,type}` | SKOS concept | multi |
-| **lernorte** | `ext:ekw:konfi:lernorte:{id,prefLabel:de,type}` | SKOS concept | multi |
-| **landeskirche** | `ext:ekw:konfi:landeskirche:{id,prefLabel:de,type}` | SKOS concept | single |
-| **plainLanguage** | `ext:ekw:konfi:plainLanguage` | scalar (`"true"`) | single |
-| **requiredMaterialsNote** | `ext:ekw:konfi:requiredMaterialsNote` | free text | single |
+| Facet | Tag keys | Value | Cardinality | Vocabulary |
+|-------|----------|-------|-------------|------------|
+| **zielgruppen** | `ext:ekw:konfi:zielgruppen:{id,prefLabel:de,type}` | SKOS concept | multi | [Zielgruppen](https://nocabs.edufeed.org/vocab/npub16f5fut6pm2lm49fa5fn9t22vu24yuq5u8qlwjgwx5n02l2ue5cfqk7kc0l/konfi-zielgruppen) |
+| **lernformat** | `ext:ekw:konfi:lernformat:{id,prefLabel:de,type}` | SKOS concept | multi | [Lernformat](https://nocabs.edufeed.org/vocab/npub16f5fut6pm2lm49fa5fn9t22vu24yuq5u8qlwjgwx5n02l2ue5cfqk7kc0l/konfi-lernformat) |
+| **zeitstruktur** | `ext:ekw:konfi:zeitstruktur:{id,prefLabel:de,type}` | SKOS concept | multi | [Zeitstruktur](https://nocabs.edufeed.org/vocab/npub16f5fut6pm2lm49fa5fn9t22vu24yuq5u8qlwjgwx5n02l2ue5cfqk7kc0l/konfi-zeitstruktur) |
+| **beteiligte** | `ext:ekw:konfi:beteiligte:{id,prefLabel:de,type}` | SKOS concept | multi | [Beteiligte](https://nocabs.edufeed.org/vocab/npub16f5fut6pm2lm49fa5fn9t22vu24yuq5u8qlwjgwx5n02l2ue5cfqk7kc0l/konfi-beteiligte) |
+| **themen** | `ext:ekw:konfi:themen:{id,prefLabel:de,type}` | SKOS concept | multi | [Themen](https://nocabs.edufeed.org/vocab/npub16f5fut6pm2lm49fa5fn9t22vu24yuq5u8qlwjgwx5n02l2ue5cfqk7kc0l/konfi-themen) |
+| **dimensionen** | `ext:ekw:konfi:dimensionen:{id,prefLabel:de,type}` | SKOS concept | multi | [Dimensionen](https://nocabs.edufeed.org/vocab/npub16f5fut6pm2lm49fa5fn9t22vu24yuq5u8qlwjgwx5n02l2ue5cfqk7kc0l/konfi-dimensionen) |
+| **methode** | `ext:ekw:konfi:methode:{id,prefLabel:de,type}` | SKOS concept | multi | [Methode](https://nocabs.edufeed.org/vocab/npub16f5fut6pm2lm49fa5fn9t22vu24yuq5u8qlwjgwx5n02l2ue5cfqk7kc0l/konfi-methode) |
+| **materialaufwand** | `ext:ekw:konfi:materialaufwand:{id,prefLabel:de,type}` | SKOS concept | single | [Materialaufwand](https://nocabs.edufeed.org/vocab/npub16f5fut6pm2lm49fa5fn9t22vu24yuq5u8qlwjgwx5n02l2ue5cfqk7kc0l/konfi-materialaufwand) |
+| **technikbedarf** | `ext:ekw:konfi:technikbedarf:{id,prefLabel:de,type}` | SKOS concept | multi | [Technikbedarf](https://nocabs.edufeed.org/vocab/npub16f5fut6pm2lm49fa5fn9t22vu24yuq5u8qlwjgwx5n02l2ue5cfqk7kc0l/konfi-technikbedarf) |
+| **lernorte** | `ext:ekw:konfi:lernorte:{id,prefLabel:de,type}` | SKOS concept | multi | [Lernorte](https://nocabs.edufeed.org/vocab/npub16f5fut6pm2lm49fa5fn9t22vu24yuq5u8qlwjgwx5n02l2ue5cfqk7kc0l/konfi-lernorte) |
+| **landeskirche** | `ext:ekw:konfi:landeskirche:{id,prefLabel:de,type}` | SKOS concept | single | [Landeskirchen](https://nocabs.edufeed.org/vocab/npub16f5fut6pm2lm49fa5fn9t22vu24yuq5u8qlwjgwx5n02l2ue5cfqk7kc0l/landeskirchen) |
+| **plainLanguage** | `ext:ekw:konfi:plainLanguage` | scalar (`"true"`) | single | — |
+| **requiredMaterialsNote** | `ext:ekw:konfi:requiredMaterialsNote` | free text | single | — |
 
 Additional rules:
 
