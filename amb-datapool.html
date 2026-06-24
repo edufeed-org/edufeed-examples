@@ -49,6 +49,8 @@
     background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
     padding: 6px 10px; border-radius: 6px; font: inherit;
   }
+  .controls select { flex: 1 1 220px; min-width: 0; max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .controls .spacer { margin-left: auto; }
   .controls button {
     background: var(--accent); color: white; border: 0; padding: 7px 14px; border-radius: 6px;
     font: inherit; font-weight: 600; cursor: pointer;
@@ -109,7 +111,9 @@
     Each educational resource is stored as a Nostr <strong>addressable event</strong> of kind <code>30142</code>, implementing the
     <a href="https://dini-ag-kim.github.io/amb/latest/" target="_blank" rel="noopener">Allgemeines Metadatenprofil für Bildungsressourcen (AMB)</a>.
     An event is uniquely identified by its three-part coordinate <code>kind:pubkey:d-tag</code> — the <code>d</code> tag typically holds the
-    canonical resource URL. Metadata is stored as flat Nostr tags using <code>:</code> as a nesting delimiter.
+    canonical resource URL. Metadata is stored as flat Nostr tags using <code>:</code> as a nesting delimiter. The exact
+    on-the-wire mapping — which AMB property becomes which Nostr tag — is defined in the
+    <a href="https://git.edufeed.org/edufeed/nips/src/branch/edufeed-amb/AMB.md" target="_blank" rel="noopener">Nostr-AMB specification (kind 30142)</a>.
   </p>
   <p>
     <strong>What "addressable" means.</strong> Nostr defines four event-storage behaviours by kind range
@@ -225,7 +229,10 @@
 <section>
   <h2>2. How data enters the pool</h2>
   <p>
-    Kind 30142 events are produced by any Nostr client that holds the author's private key:
+    Kind 30142 events are produced by any Nostr client that can <strong>sign on behalf of the author</strong> — whether it
+    holds the private key directly or delegates to a remote signer
+    (<a href="https://github.com/nostr-protocol/nips/blob/master/46.md" target="_blank" rel="noopener">NIP-46</a>).
+    Signing is independent of where the event is published:
   </p>
   <ul style="font-size:13.5px; margin:0 0 12px;">
     <li><strong>Edufeed resource form</strong> — a guided wizard in the Edufeed web app that maps form fields to the AMB tag structure and signs the event client-side via NIP-07 (browser extension) or NIP-46 (remote signer).</li>
@@ -234,9 +241,25 @@
   </ul>
   <p>
     After signing, the event is published to the Edufeed AMB relay (<code>wss://amb-relay.edufeed.org</code>)
-    using standard Nostr <code>EVENT</code> messages. Any Nostr client that knows the author's pubkey can also
-    publish replacements or deletions.
+    using standard Nostr <code>EVENT</code> messages. Anyone who can sign as the author can later publish
+    replacements or deletions for the same coordinate.
   </p>
+  <p>
+    For a quick end-to-end check from the command line, <a href="https://github.com/fiatjaf/nak" target="_blank" rel="noopener">nak</a>
+    (the Nostr army knife) builds, signs, and publishes a valid kind 30142 event in one call:
+  </p>
+  <pre><code># Build, sign, and publish a kind 30142 event to the AMB relay
+nak event -k 30142 \
+  -d "https://example.org/my-resource" \
+  -t "name=My Open Educational Resource" \
+  -t "about:id=http://w3id.org/kim/schulfaecher/s1055" \
+  -t "about:prefLabel:de=Religion" \
+  -t "learningResourceType:id=https://w3id.org/kim/hcrt/drill_and_practice" \
+  -t "learningResourceType:prefLabel:de=Übung" \
+  -t "t=Beispiel" \
+  -c "A short description of the resource." \
+  --sec nsec1... \
+  wss://amb-relay.edufeed.org</code></pre>
 </section>
 
 <!-- ===== Section 3: Storage location ================================== -->
@@ -255,27 +278,46 @@
 // Specific resource by coordinate
 {"kinds": [30142], "authors": ["&lt;pubkey-hex&gt;"], "#d": ["&lt;d-tag-value&gt;"]}
 
+// Filter by Nostr-native keyword tag
+{"kinds": [30142], "#t": ["Gerechtigkeit"]}
+
 // Filter by subject URI (AMB tag filter)
-{"kinds": [30142], "#about:id": ["https://w3id.org/kim/schulfaecher/s1009"]}
+{"kinds": [30142], "#about:id": ["http://w3id.org/kim/schulfaecher/s1055"]}
 
 // Filter by resource type URI
-{"kinds": [30142], "#learningResourceType:id": ["https://w3id.org/openeduhub/vocabs/new_lrt/video"]}
-
-// Filter by EKW extension property
-{"kinds": [30142], "#ext:ekw:gradeLevel:id": ["https://example.org/grade/5"]}</code></pre>
+{"kinds": [30142], "#learningResourceType:id": ["https://w3id.org/kim/hcrt/drill_and_practice"]}</code></pre>
+  <p class="small" style="margin:8px 0 12px;">
+    Tag filters only work for keys the relay <strong>indexes</strong>: all single-letter Nostr tags (<code>d</code>,
+    <code>t</code>, <code>p</code>, <code>a</code>, …) plus the AMB-core keys such as <code>about:id</code> and
+    <code>learningResourceType:id</code>. Values must match <em>byte-for-byte</em> (note the <code>http://</code> scheme
+    above — it is whatever the producer stored, not necessarily <code>https://</code>). Extension namespaces
+    (<code>ext:ekw:*</code> and per-form <code>ext:&lt;slug&gt;:*</code>) are <strong>not</strong> indexed for filtering;
+    fetch a coarser set and refine client-side, or use the converter to read them out of the <code>ext</code> object.
+  </p>
 
   <p>Query using <strong>NIP-50 full-text search</strong> (supported by <code>amb-relay.edufeed.org</code>):</p>
   <pre><code>// Free-text search across name, description, keywords
-{"kinds": [30142], "search": "pythagorean theorem"}
+{"kinds": [30142], "search": "evangelisch"}
 
 // Field-specific filter via dot-notation
 {"kinds": [30142], "search": "publisher.name:e-teaching.org"}
 
 // Combined: free text + field filter
-{"kinds": [30142], "search": "forschung about.prefLabel.de:Mathematik"}
+{"kinds": [30142], "search": "Frieden about.prefLabel.de:evangelisch"}</code></pre>
+  <p class="small" style="margin:8px 0 12px;">
+    NIP-50 dot-notation covers AMB-core fields (<code>name</code>, <code>description</code>, <code>publisher.name</code>,
+    <code>about.prefLabel.&lt;lang&gt;</code>, …). Like the tag index, it does not currently reach <code>ext.*</code> facets.
+  </p>
 
-// Extension property filter in NIP-50 search
-{"kinds": [30142], "search": "ext.ekw.gradeLevel.prefLabel.de:Klasse 5"}</code></pre>
+  <p>Query from the command line with <a href="https://github.com/fiatjaf/nak" target="_blank" rel="noopener">nak</a>:</p>
+  <pre><code># All AMB events, newest first (limit 20)
+nak req -k 30142 -l 20 wss://amb-relay.edufeed.org
+
+# Filter by subject tag
+nak req -k 30142 -t about:id=http://w3id.org/kim/schulfaecher/s1055 wss://amb-relay.edufeed.org
+
+# NIP-50 full-text search
+nak req -k 30142 --search "evangelisch" wss://amb-relay.edufeed.org</code></pre>
 </section>
 
 <!-- ===== Section 4: Updates & deletions =============================== -->
@@ -347,7 +389,9 @@
   </table>
   <h3 id="ekw-vocabs" style="font-size:16px; margin:24px 0 8px;">EKW extension vocabularies</h3>
   <p>
-    The <strong>EKW</strong> (<em>Einfach Konkret Wirksam</em>) profile adds domain-specific facets under the
+    The <strong>EKW</strong> profile — named for the
+    <a href="https://www.ekkw.de/" target="_blank" rel="noopener">Evangelische Kirche von Kurhessen-Waldeck</a> (EKKW) —
+    adds domain-specific facets under the
     <code>ext:ekw:*</code> namespace, plus three EKW-specific replacements for AMB-core vocabularies. All of these
     vocabularies are published as Nostr concept schemes (kind <code>39737</code>, individual concepts kind
     <code>39738</code>) by <strong>VocabulOER</strong>
@@ -422,13 +466,15 @@
 <section>
   <h2>6. Convert events back to plain JSON (AMB)</h2>
   <p>
-    The <code>amb-nostr-converter</code> library can reconstruct an AMB JSON document from any kind 30142 event.
+    The <a href="https://git.edufeed.org/edufeed/amb-nostr-converter" target="_blank" rel="noopener"><code>amb-nostr-converter</code></a>
+    library (the same tool powering the widget below) can reconstruct an AMB JSON document from any kind 30142 event.
     It reverses the tag-flattening, re-groups concept arrays, maps <code>p</code> tags to
     <code>creator</code>/<code>contributor</code>, maps <code>a</code> tags to relation objects, and surfaces
     <code>ext:*</code> tags under a sibling <code>ext</code> object in the output.
   </p>
-  <p>CLI usage (requires Node.js):</p>
-  <pre><code>amb-convert nostr:amb event.json</code></pre>
+  <p>Install it from the Edufeed npm registry and use the CLI (requires Node.js):</p>
+  <pre><code>npm install amb-nostr-converter --registry=https://git.edufeed.org/api/packages/edufeed/npm/
+amb-convert nostr:amb event.json</code></pre>
 
   <p>Or use the live widget below: pick a <strong>sample event</strong> — or one of the live EKW
   resources fetched in <a href="#live-feed">Section 7</a> — from the dropdown, and it loads into the left
@@ -438,6 +484,7 @@
   <div class="controls">
     <label for="examplePicker" class="widget-label" style="margin:0 4px 0 0;align-self:center;">Example</label>
     <select id="examplePicker"></select>
+    <span class="spacer"></span>
     <button id="toAmb">Nostr → AMB</button>
     <button class="secondary" id="toNostr">AMB → Nostr</button>
   </div>
@@ -483,6 +530,67 @@
     <span class="status" id="ekwStatus"><span class="dot"></span><span id="ekwStatusText">idle</span></span>
   </div>
   <div class="ekw-list" id="ekwList"></div>
+</section>
+
+<!-- ===== Section 8: Client libraries ================================= -->
+<section>
+  <h2>8. Client libraries by language</h2>
+  <p>
+    Everything in this guide is plain Nostr, so <strong>any</strong> Nostr library can read, write, and query kind
+    30142 events — no Edufeed-specific SDK is required. A few well-maintained options per language:
+  </p>
+  <table class="mapping-table">
+    <thead>
+      <tr><th>Language</th><th>Library</th><th>Notes</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>JavaScript / TypeScript</td>
+        <td>
+          <a href="https://github.com/hzrd149/applesauce" target="_blank" rel="noopener">Applesauce</a> ·
+          <a href="https://github.com/nbd-wtf/nostr-tools" target="_blank" rel="noopener">nostr-tools</a>
+        </td>
+        <td class="note">Applesauce is the high-level toolkit Edufeed itself uses (EventStore, models, EventFactory); nostr-tools covers low-level primitives (keys, NIP-19, relays).</td>
+      </tr>
+      <tr>
+        <td>AMB ↔ Nostr (JS/TS)</td>
+        <td><a href="https://git.edufeed.org/edufeed/amb-nostr-converter" target="_blank" rel="noopener">amb-nostr-converter</a></td>
+        <td class="note">Edufeed's own converter between AMB JSON and kind 30142 — powers the widget in Section 6.</td>
+      </tr>
+      <tr>
+        <td>Go</td>
+        <td>
+          <a href="https://github.com/nbd-wtf/go-nostr" target="_blank" rel="noopener">go-nostr</a> ·
+          <a href="https://github.com/fiatjaf/khatru" target="_blank" rel="noopener">khatru</a>
+        </td>
+        <td class="note">go-nostr for clients; khatru for building relays.</td>
+      </tr>
+      <tr>
+        <td>Rust</td>
+        <td><a href="https://github.com/rust-nostr/nostr" target="_blank" rel="noopener">rust-nostr (nostr-sdk)</a></td>
+        <td class="note">High-level SDK; also the source of bindings for several other languages.</td>
+      </tr>
+      <tr>
+        <td>Python</td>
+        <td><a href="https://pypi.org/project/nostr-sdk/" target="_blank" rel="noopener">nostr-sdk</a></td>
+        <td class="note">Python bindings of rust-nostr.</td>
+      </tr>
+      <tr>
+        <td>PHP</td>
+        <td><a href="https://github.com/nostrver-se/nostr-php" target="_blank" rel="noopener">nostr-php</a></td>
+        <td class="note">Helper library — docs at <a href="https://nostr-php.dev/" target="_blank" rel="noopener">nostr-php.dev</a>.</td>
+      </tr>
+      <tr>
+        <td>CLI / shell</td>
+        <td><a href="https://github.com/fiatjaf/nak" target="_blank" rel="noopener">nak</a></td>
+        <td class="note">The "Nostr army knife" used in the examples above — query, build, sign, and publish from the terminal.</td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="small">
+    A broader, continuously updated catalogue of libraries and tools lives in
+    <a href="https://github.com/aljazceru/awesome-nostr" target="_blank" rel="noopener">awesome-nostr</a>.
+  </p>
 </section>
 
 <hr class="sep">
@@ -8413,7 +8521,162 @@ function applyRelationTags(amb, aTags) {
     amb[role].push(relation);
   }
 }
-window.__ambConv = { ambToNostr, nostrToAmb };
+
+// src/profiles/websocketFetcher.ts
+var DEFAULT_PROFILE_RELAYS = [
+  "wss://purplepag.es",
+  "wss://relay.edufeed.org",
+  "wss://relay.damus.io"
+];
+function getWebSocketCtor() {
+  const ctor = globalThis.WebSocket;
+  return typeof ctor === "function" ? ctor : null;
+}
+function parseName(content) {
+  if (typeof content !== "string") return null;
+  try {
+    const meta = JSON.parse(content);
+    const name = typeof meta.name === "string" && meta.name ? meta.name : typeof meta.display_name === "string" && meta.display_name ? meta.display_name : null;
+    return name ? { name } : null;
+  } catch {
+    return null;
+  }
+}
+var websocketFetcher = (pubkeys, relays, timeoutMs) => new Promise((resolve) => {
+  const Ctor = getWebSocketCtor();
+  if (pubkeys.length === 0 || relays.length === 0 || !Ctor) {
+    resolve(/* @__PURE__ */ new Map());
+    return;
+  }
+  const subId = "p" + Math.random().toString(36).slice(2, 10);
+  const filter = { kinds: [0], authors: pubkeys };
+  const best = /* @__PURE__ */ new Map();
+  const sockets = [];
+  let settled = false;
+  let doneSockets = 0;
+  const finish = () => {
+    if (settled) return;
+    settled = true;
+    clearTimeout(timer);
+    for (const ws of sockets) {
+      try {
+        ws.close();
+      } catch {
+      }
+    }
+    const out = /* @__PURE__ */ new Map();
+    for (const [pubkey, entry] of best) out.set(pubkey, entry.info);
+    resolve(out);
+  };
+  const markDone = () => {
+    doneSockets += 1;
+    if (doneSockets >= relays.length) finish();
+  };
+  const timer = setTimeout(finish, timeoutMs);
+  const handleEvent = (ev) => {
+    if (!ev || ev.kind !== 0 || typeof ev.pubkey !== "string" || typeof ev.created_at !== "number") return;
+    const prev = best.get(ev.pubkey);
+    if (prev && prev.created_at >= ev.created_at) return;
+    const info = parseName(ev.content);
+    if (info) best.set(ev.pubkey, { created_at: ev.created_at, info });
+  };
+  for (const url of relays) {
+    let ws;
+    try {
+      ws = new Ctor(url);
+    } catch {
+      markDone();
+      continue;
+    }
+    sockets.push(ws);
+    let counted = false;
+    const once = () => {
+      if (!counted) {
+        counted = true;
+        markDone();
+      }
+    };
+    ws.onopen = () => {
+      try {
+        ws.send(JSON.stringify(["REQ", subId, filter]));
+      } catch {
+        once();
+      }
+    };
+    ws.onmessage = (e) => {
+      let msg;
+      try {
+        msg = JSON.parse(typeof e.data === "string" ? e.data : "");
+      } catch {
+        return;
+      }
+      if (!Array.isArray(msg)) return;
+      if (msg[0] === "EVENT" && msg[1] === subId) handleEvent(msg[2]);
+      else if (msg[0] === "EOSE" && msg[1] === subId) once();
+    };
+    ws.onerror = () => once();
+    ws.onclose = () => once();
+  }
+});
+
+// src/profiles/resolveNames.ts
+var PERSON_FIELDS = ["creator", "contributor"];
+function decodePubkey(id) {
+  if (typeof id !== "string" || !id.startsWith("nostr:")) return null;
+  const bech = id.slice("nostr:".length);
+  try {
+    const decoded = nip19_exports.decode(bech);
+    if (decoded.type === "npub") return decoded.data;
+    if (decoded.type === "nprofile") return decoded.data.pubkey;
+  } catch {
+    return null;
+  }
+  return null;
+}
+function shortNpub(pubkey) {
+  try {
+    return nip19_exports.npubEncode(pubkey).slice(0, 12) + "\u2026";
+  } catch {
+    return pubkey.slice(0, 8) + "\u2026";
+  }
+}
+async function nostrToAmbWithProfiles(event, options = {}) {
+  const base = options.defaultLanguage !== void 0 ? nostrToAmb(event, { defaultLanguage: options.defaultLanguage }) : nostrToAmb(event);
+  if (!base.success || !base.data) return base;
+  const amb = base.data;
+  const targets = [];
+  for (const field of PERSON_FIELDS) {
+    const list = amb[field];
+    if (!Array.isArray(list)) continue;
+    for (const entry of list) {
+      if (!entry || typeof entry !== "object" || entry.name) continue;
+      const pubkey = decodePubkey(entry.id);
+      if (pubkey) targets.push({ entry, pubkey });
+    }
+  }
+  if (targets.length === 0) return base;
+  const uniquePubkeys = [...new Set(targets.map((t) => t.pubkey))];
+  const relays = options.relays ?? DEFAULT_PROFILE_RELAYS;
+  const fetchProfile = options.fetchProfile ?? websocketFetcher;
+  const timeoutMs = options.timeoutMs ?? 4e3;
+  const warnings = base.warnings ? [...base.warnings] : [];
+  let names;
+  try {
+    names = await fetchProfile(uniquePubkeys, relays, timeoutMs);
+  } catch (err) {
+    warnings.push(`profile fetch failed: ${err instanceof Error ? err.message : String(err)}`);
+    return { ...base, warnings };
+  }
+  for (const { entry, pubkey } of targets) {
+    const name = names.get(pubkey)?.name;
+    if (name) entry.name = name;
+    else warnings.push(`no profile name for ${shortNpub(pubkey)}`);
+  }
+  const result = { ...base, data: amb };
+  if (warnings.length > 0) result.warnings = warnings;
+  return result;
+}
+window.__ambConv = { ambToNostr, nostrToAmb, nostrToAmbWithProfiles };
 /*! Bundled license information:
 
 @noble/hashes/esm/utils.js:
@@ -8433,13 +8696,12 @@ window.__ambConv = { ambToNostr, nostrToAmb };
 @noble/ciphers/esm/utils.js:
   (*! noble-ciphers - MIT License (c) 2023 Paul Miller (paulmillr.com) *)
 */
-
 </script>
 
 <script type="module">
   // Converter functions come from the inlined bundle above (window.__ambConv),
   // so the page works when opened directly via file:// (no cross-file ES-module import).
-  const { nostrToAmb, ambToNostr } = window.__ambConv;
+  const { nostrToAmb, ambToNostr, nostrToAmbWithProfiles } = window.__ambConv;
   const left = document.getElementById('inp');
   const right = document.getElementById('out');
   const picker = document.getElementById('examplePicker');
@@ -8498,10 +8760,23 @@ window.__ambConv = { ambToNostr, nostrToAmb };
     return (t && t[1]) || '(untitled)';
   };
 
-  function runToAmb() {
-    try { const r = nostrToAmb(JSON.parse(left.value));
-      right.value = r.success ? JSON.stringify(r.data, null, 2) : 'Error: ' + r.error.message;
-    } catch (e) { right.value = 'Invalid JSON: ' + e.message; }
+  // Async: enriches creator/contributor names by fetching kind-0 profiles over
+  // WebSocket (sensible default relays). A request token discards stale results
+  // when the user switches examples mid-fetch. Pure `nostrToAmb` is still
+  // available on window.__ambConv for the synchronous, offline contract.
+  let toAmbToken = 0;
+  async function runToAmb() {
+    let event;
+    try { event = JSON.parse(left.value); }
+    catch (e) { right.value = 'Invalid JSON: ' + e.message; return; }
+    const token = ++toAmbToken;
+    right.value = 'Resolving profile names…';
+    let r;
+    try { r = await nostrToAmbWithProfiles(event); }
+    catch (e) { if (token === toAmbToken) right.value = 'Error: ' + (e?.message || String(e)); return; }
+    if (token !== toAmbToken) return; // a newer conversion superseded this one
+    right.value = r.success ? JSON.stringify(r.data, null, 2) : 'Error: ' + r.error.message;
+    if (r.warnings?.length) console.warn('Profile resolution warnings:', r.warnings);
   }
   function runToNostr() {
     try { const r = ambToNostr(JSON.parse(right.value || left.value), { pubkey: '0'.repeat(64) });
