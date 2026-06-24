@@ -8789,6 +8789,10 @@ window.__ambConv = { ambToNostr, nostrToAmb, nostrToAmbWithProfiles };
     if (!ev) return;
     left.value = JSON.stringify(ev, null, 2);
     runToAmb();
+    // Reset to the placeholder so the dropdown always reopens from the top with
+    // the full list. A native <select> otherwise reopens scrolled to a deep
+    // live-group selection, which some browsers render as a collapsed list.
+    picker.selectedIndex = 0;
   }
 
   function addLiveEvents(events) {
@@ -8804,7 +8808,14 @@ window.__ambConv = { ambToNostr, nostrToAmb, nostrToAmbWithProfiles };
     liveGroup.hidden = events.length === 0;
   }
 
-  // Build the picker: curated samples, then a (hidden until populated) live group.
+  // Build the picker: a neutral placeholder (so the dropdown always reopens
+  // from the top), curated samples, then a (hidden until populated) live group.
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.disabled = true;
+  placeholder.textContent = '— choose an example to load —';
+  picker.appendChild(placeholder);
+
   const sampleGroup = document.createElement('optgroup');
   sampleGroup.label = 'Sample events';
   EXAMPLES.forEach((ex, i) => {
