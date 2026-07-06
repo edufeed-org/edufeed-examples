@@ -8,10 +8,10 @@ Nostr-basierte Bildungsmetadaten (AMB, `kind 30142`) und Kalender-Events
 | Datei | Inhalt |
 |---|---|
 | `index.html` | Landing Page, verlinkt alle Guides und Demos |
-| `amb-datapool.html` | Educational Data Pool — Integration Guide (**Schreib-Seite**, kind 30142 / NIP-AMB) |
-| `amb-demo.html` | AMB Resources — Live-Demo (**Lese-Seite** derselben Daten) |
-| `calendar-integration.md` | Educational Calendar Events — Integration Guide (**Schreib-Seite**, NIP-52 + Edufeed-Erweiterung) — *Entwurf* |
-| `calendar-demo.html` | Calendar Events — Live-Demo (**Lese-Seite**) |
+| `amb-datapool.html` | Educational Data Pool — integration guide (**Schreib-Seite**, kind 30142, specified by NIP-AMB) |
+| `amb-demo.html` | Educational Data Pool — live demo (**Lese-Seite** derselben Daten) |
+| `calendar-integration.md` | Educational Calendar Events — integration guide (**Schreib-Seite**, NIP-52 + Edufeed-Erweiterung) — *Entwurf* |
+| `calendar-demo.html` | Educational Calendar Events — live demo (**Lese-Seite**) |
 | `ekw-metadata.md` | EKW-Extension-Spezifikation (`ext:ekw:*`) |
 
 ## Sprachregelung (Terminologie)
@@ -22,13 +22,18 @@ wie zwei verschiedene Systeme wirkt, gilt durchgängig:
 - **„kind 30142" und „NIP-AMB" meinen dasselbe.** NIP-AMB ist die
   Spezifikation, `30142` die Event-Kind-Nummer, die sie definiert. Formulierung
   in den Guides: *„AMB resources (kind 30142, specified by NIP-AMB)"*.
-- **„Educational Data Pool" und „AMB Resources" sind zwei Sichten auf
-  denselben Datenbestand.** Der Integration Guide behandelt die
-  **Schreib-Seite** (publizieren, abfragen, aktualisieren), die Live-Demo die
-  **Lese-Seite** (lesen, rendern). Jede Seite benennt ihr Gegenstück und
-  verlinkt es.
-- Dasselbe Muster gilt für Kalender-Events: `calendar-integration.md`
-  (schreiben) ↔ `calendar-demo.html` (lesen).
+- **Ein Datenbestand, ein Name, zwei Seiten.** Guide und Demo zum selben
+  Datenbestand tragen denselben Titel und unterscheiden sich nur im Zusatz:
+  „Educational Data Pool — integration guide" behandelt die **Schreib-Seite**
+  (publizieren, abfragen, aktualisieren), „Educational Data Pool — live demo"
+  die **Lese-Seite** (lesen, rendern). Der frühere Titel „AMB Resources" wird
+  nicht mehr verwendet. Jede Seite benennt ihr Gegenstück und verlinkt es.
+- Dasselbe Muster gilt für Termine — Titelbegriff dort: **„Educational
+  Calendar Events"** (integration guide ↔ live demo).
+- Feste Tag-Namen der Kalender-Erweiterung (beschlossen 2026-07-06):
+  `registrationRequired` (true/false), `price` (Betrag + Währung, Semantik
+  leer/0/>0), `eventAttendanceMode` (Name und Werte exakt wie schema.org),
+  `educationalLevel:*` (NIP-AMB-Konzept-Tripel).
 
 ## Arbeitsweise
 
@@ -37,7 +42,7 @@ entstanden — und so sollten künftige Änderungen an den Guides ablaufen:
 
 1. **Bestandsaufnahme.** Alle Seiten vollständig lesen und die tatsächliche
    Begriffsverwendung erheben (`grep` über alle Dateien nach „kind 30142",
-   „NIP-AMB", „Data Pool", „AMB Resources" usw.). Erst dann entscheiden,
+   „NIP-AMB", „Data Pool" usw.). Erst dann entscheiden,
    welcher Begriff kanonisch ist und wie die Beziehung formuliert wird.
 2. **Abgleich mit Live-Daten.** Behauptungen über das Datenformat gegen echte
    Events vom Relay prüfen (Samples während der Entwicklung vom Dev-Relay

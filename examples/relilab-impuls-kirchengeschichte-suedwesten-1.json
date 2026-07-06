@@ -1,0 +1,33 @@
+{
+  "kind": 31923,
+  "tags": [
+    ["d", "https://relilab.org/relilab-impuls-kirchengeschichte-im-suedwesten-i/"],
+    ["title", "relilab impuls: Kirchengeschichte im Südwesten I"],
+    ["start", "1790258400"],
+    ["start_tzid", "Europe/Berlin"],
+    ["end", "1790262000"],
+    ["end_tzid", "Europe/Berlin"],
+    ["summary", "Ein Überblick über die Kirchengeschichte und die Kirchengeschichten der Regionen Baden, Pfalz und Elsass. Teil 1: Das Christentum in der Antike und im (frühen) Mittelalter."],
+    ["location", "Online"],
+    ["r", "https://relilab.org/relilab-impuls-kirchengeschichte-im-suedwesten-i/"],
+    ["t", "relilab"],
+    ["t", "relilab-Impuls"],
+    ["t", "Kirchengeschichte"],
+    ["t", "außerschulisch"],
+
+    ["registrationRequired", "false"],
+    ["price", "0", "EUR"],
+    ["eventAttendanceMode", "https://schema.org/OnlineEventAttendanceMode"],
+
+    ["educationalLevel:id", "https://w3id.org/kim/educationalLevel/level_2"],
+    ["educationalLevel:prefLabel:de", "Sekundarbereich I"],
+    ["educationalLevel:type", "Concept"],
+    ["educationalLevel:id", "https://w3id.org/kim/educationalLevel/level_3"],
+    ["educationalLevel:prefLabel:de", "Sekundarbereich II"],
+    ["educationalLevel:type", "Concept"],
+    ["educationalLevel:id", "https://w3id.org/kim/educationalLevel/level_C"],
+    ["educationalLevel:prefLabel:de", "Fortbildung"],
+    ["educationalLevel:type", "Concept"]
+  ],
+  "content": "Teil 1: Frühzeit und Mittelalter\n\nDer Südwesten Deutschlands, die heutigen Regionen Baden, Pfalz und Elsass, haben eine lange gemeinsame Geschichte. Im römischen Reich kam das Christentum an den Rhein, Klöster und Territorien wie das Kloster Lorsch, die Kurpfalz oder das Bistum Speyer haben über den Rhein hinweg Einheiten geschaffen, die sich auch auf das kirchliche Leben auswirkten. Vieles von heute wirkt von damals nach. Einen Überblick über die Kirchengeschichte und die Kirchengeschichten der Region bietet Michael Landgraf, RPZ Neustadt, in drei Teilen.\n\nTermin: 24.9.2026, 16–17 Uhr\n\nZielgruppe: Lehrkräfte für ev. Religion in der Sek I und II und alle Interessierte.\n\nLeitung / Moderation: Olav Richter, Studienleitung, RPI Baden\nReferent: Michael Landgraf, Neustadt a.d. Weinstraße\n\nBei Rückfragen: Tel.: 06321 33559, rpz.neustadt@evkirchepfalz.de\n\nFoto: Bibelmuseum Neustadt"
+}

@@ -1,17 +1,19 @@
 # Educational Calendar Events — integration guide
 
-> **Status: DRAFT.** This guide proposes the Edufeed extension of NIP-52
+> **Status: DRAFT.** This guide specifies the Edufeed extension of NIP-52
 > ("NIP-52-Edufeed") based on the agreements in
 > [edufeed-app issue #13](https://github.com/edufeed-org/edufeed-app/issues/13).
-> Attribute *semantics* below follow the issue agreements; the concrete *tag
-> names* are proposals of this draft and marked as such. Nothing here is
-> implemented on the relays yet — see [Status](#6-status-and-open-questions).
+> Attribute semantics follow the issue agreements; the tag names
+> (`registrationRequired`, `price`, `eventAttendanceMode`, `educationalLevel:*`)
+> are fixed. Nothing here is implemented on the relays yet — see
+> [Status](#6-status-and-open-questions).
 
 This guide covers the **write side** of educational calendar events: how to
 publish [NIP-52](https://github.com/nostr-protocol/nips/blob/master/52.md)
 calendar events enriched with educational metadata into the Edufeed data pool.
 The **read side** — fetching and rendering — is shown in the
-[Calendar Events live demo](calendar-demo.html). Both describe the same events.
+[Educational Calendar Events live demo](calendar-demo.html). Both describe the
+same events.
 
 It is the calendar counterpart of the
 [Educational Data Pool integration guide](amb-datapool.html), which covers AMB
@@ -57,8 +59,10 @@ educational classification. The Edufeed working group agreed on the following
 attributes (issue #13, calls of 2025-03-25 and 2025-05-22). Two tag styles are
 used, on purpose:
 
-- **Plain event attributes** (registration, price, mode) use flat NIP-52-style
-  tags (lowercase, `snake_case` — like `start_tzid`).
+- **Plain event attributes** (registration, price, mode) are flat tags with
+  schema.org-aligned camelCase names where a schema.org counterpart exists
+  (`eventAttendanceMode`, `registrationRequired`); `price` follows the
+  NIP-15 / NIP-99 shape.
 - **Vocabulary attributes** (educational level, later: Bildungsbereiche,
   Zielgruppen) reuse the **NIP-AMB flattening convention**
   (`<property>:id` / `<property>:prefLabel:<lang>` / `<property>:type` concept
@@ -73,11 +77,10 @@ linking to the event page — there is deliberately no structured
 registration-link field.
 
 ```
-["registration_required", "true"]     // or "false"
+["registrationRequired", "true"]     // or "false"
 ```
 
 - Tag **absent** → no statement.
-- *Tag name is a draft proposal; the agreed semantics are just ja/nein.*
 
 ### 2.2 Cost (Kosten) — agreed: price + currency
 
@@ -108,17 +111,21 @@ explain in the description. A structured per-audience price list
 
 ### 2.3 Attendance mode (Modus) — agreed: online / offline / mix
 
+Tag name and values are taken **exactly** from schema.org
+[`eventAttendanceMode`](https://schema.org/eventAttendanceMode):
+
 ```
-["attendance_mode", "online"]     // "online" | "offline" | "mix"
+["eventAttendanceMode", "https://schema.org/OnlineEventAttendanceMode"]
 ```
+
+| Issue-#13 term | Tag value |
+|---|---|
+| online | `https://schema.org/OnlineEventAttendanceMode` |
+| offline | `https://schema.org/OfflineEventAttendanceMode` |
+| mix | `https://schema.org/MixedEventAttendanceMode` |
 
 - `mix` covers what other systems call *blended* or *hybrid*; details are
   expected on the organizer's event page.
-- Corresponds to schema.org
-  [`eventAttendanceMode`](https://schema.org/eventAttendanceMode)
-  (`Online` / `Offline` / `Mixed` `EventAttendanceMode`) — the mapping matters
-  for import/export pipelines. *Tag name (`attendance_mode` vs.
-  `eventAttendanceMode`) is a draft proposal.*
 
 ### 2.4 Participants and roles — agreed: organizer / attendee
 
@@ -191,9 +198,9 @@ required, aimed at teacher training (Fortbildung) and preparatory service:
     ["r", "https://relilab.org/relilab-werkstatt-2026-09/"],
     ["t", "relilab"],
 
-    ["registration_required", "true"],
+    ["registrationRequired", "true"],
     ["price", "0", "EUR"],
-    ["attendance_mode", "online"],
+    ["eventAttendanceMode", "https://schema.org/OnlineEventAttendanceMode"],
 
     ["p", "<organizer pubkey hex>", "wss://relay.edufeed.org", "organizer"],
 
@@ -227,8 +234,8 @@ nak event -k 31923 \
   -t "title=Einführung in OER" \
   -t "start=1789651800" \
   -t "start_tzid=Europe/Berlin" \
-  -t "registration_required=true" \
-  -t "attendance_mode=online" \
+  -t "registrationRequired=true" \
+  -t "eventAttendanceMode=https://schema.org/OnlineEventAttendanceMode" \
   -t "educationalLevel:id=https://w3id.org/kim/educationalLevel/level_C" \
   -t "educationalLevel:prefLabel:de=Fortbildung" \
   -t "educationalLevel:type=Concept" \
@@ -280,10 +287,9 @@ description; price + currency with the empty/0/>0 semantics; attendance mode
 online/offline/mix; `p`-tag roles organizer/attendee; educationalLevel as an
 additional vocabulary attribute.
 
-**Proposed by this draft** (needs sign-off): the concrete tag names
-`registration_required`, `price` (NIP-99 shape), `attendance_mode`; the rule
-"plain attributes → NIP-52 style, vocabulary attributes → NIP-AMB concept
-triples".
+**Fixed tag names** (decided 2026-07-06): `registrationRequired` (true/false),
+`price` (NIP-15 semantics, NIP-99 shape), `eventAttendanceMode` (name and
+values exactly as schema.org), `educationalLevel:*` (NIP-AMB concept triples).
 
 **Open / follow-ups:**
 
@@ -293,5 +299,3 @@ triples".
   text is the interim answer.
 - Further vocabulary attributes: Bildungsbereiche, Zielgruppen (audience).
 - Import relilab dates into edufeed.
-- Should `attendance_mode` values be schema.org URIs instead of
-  `online|offline|mix` literals for cleaner round-tripping?
