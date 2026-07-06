@@ -41,24 +41,30 @@
 <div class="wrap">
   <header>
     <h1>Edufeed examples</h1>
-    <p>Live demos and integration guides for consuming Edufeed's Nostr-based educational metadata.</p>
+    <p>Live demos and integration guides for Edufeed's <strong>Educational Data Pool</strong> — Nostr-based educational metadata and calendar events.</p>
     <p>Everything here is plain Nostr — any Nostr client or library can read, query, and render the data.</p>
+    <p>Each dataset is documented from two sides: an <strong>integration guide</strong> covers writing into the data pool, a <strong>live demo</strong> covers reading from it. Both sides always describe the <em>same</em> events — e.g. "Educational Data Pool" (write side) and "AMB Resources" (read side) are two views of one dataset, and "kind 30142" is the event format that the NIP-AMB specification defines.</p>
   </header>
 
   <div class="cards">
     <a class="card" href="amb-datapool.html">
-      <h2>Educational Data Pool — integration guide<span class="pill">kind 30142</span></h2>
-      <p>How to consume, query, and convert Nostr / AMB educational metadata from the Edufeed data pool — with a live converter widget, queryable examples, and client libraries by language.</p>
+      <h2>Educational Data Pool — integration guide<span class="pill">kind 30142 · NIP-AMB</span></h2>
+      <p>Write side: how to publish, query, update, and convert AMB resources — Nostr events of <code>kind 30142</code> as specified by NIP-AMB — with a live converter widget, queryable examples, and client libraries by language.</p>
     </a>
 
     <a class="card" href="amb-demo.html">
-      <h2>AMB Resources — live demo<span class="pill">NIP-AMB</span></h2>
-      <p>Live demo &amp; documentation: how to read NIP-AMB learning resources from <code>amb-relay.edufeed.org</code> and render them in different designs.</p>
+      <h2>AMB Resources — live demo<span class="pill">kind 30142 · NIP-AMB</span></h2>
+      <p>Read side of the same data pool: how to read AMB resources from <code>amb-relay.edufeed.org</code> and render them in different designs.</p>
+    </a>
+
+    <a class="card" href="calendar-integration.md">
+      <h2>Educational Calendar Events — integration guide<span class="pill">NIP-52 + edu · draft</span></h2>
+      <p>Write side: how to publish NIP-52 calendar events enriched with educational metadata — registration, price, attendance mode, participant roles, and educational level (Bildungsstufe) — the Edufeed extension of NIP-52.</p>
     </a>
 
     <a class="card" href="calendar-demo.html">
       <h2>Calendar Events — live demo<span class="pill">NIP-52</span></h2>
-      <p>Live demo &amp; documentation: how to read NIP-52 calendar events from <code>relay.edufeed.org</code> and render them in different designs.</p>
+      <p>Read side: how to read NIP-52 calendar events from <code>relay.edufeed.org</code> and render them in different designs.</p>
     </a>
 
     <a class="card" href="ekw-metadata.md">
