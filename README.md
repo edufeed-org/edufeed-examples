@@ -68,13 +68,17 @@ entstanden — und so sollten künftige Änderungen an den Guides ablaufen:
    Issue-Diskussion (differenzierte Preise, Relay-Indexierung,
    Bildungsbereiche/Zielgruppen) stehen gesammelt im Abschnitt
    „Status and open questions".
-4. **Bestehende Konventionen wiederverwenden statt neu erfinden.** Die
-   Bildungsstufe nutzt das KIM-Vokabular
-   (`https://w3id.org/kim/educationalLevel/`) und exakt die
-   Tag-Flattening-Konvention von NIP-AMB (`educationalLevel:id` /
-   `:prefLabel:de` / `:type`), damit vorhandenes Tooling
-   (`amb-nostr-converter`, EKW-Reader) die Werte ohne Sonderbehandlung liest.
-   Preis-Tags folgen der etablierten NIP-99-Form.
+4. **Bestehende Konventionen wiederverwenden statt neu erfinden.**
+   Vokabular-Attribute nutzen die auf
+   [nocabs.edufeed.org](https://nocabs.edufeed.org) publizierten
+   SKOS-Vokabulare (wie die EKW-Facetten in `ekw-metadata.md`) — die
+   Bildungsstufe z. B. das dort gehostete
+   [Bildungsstufen-Vokabular](https://nocabs.edufeed.org/vocab/npub16f5fut6pm2lm49fa5fn9t22vu24yuq5u8qlwjgwx5n02l2ue5cfqk7kc0l/educational-level),
+   das die kanonischen KIM-URIs (`https://w3id.org/kim/educationalLevel/`)
+   beibehält — und exakt die Tag-Flattening-Konvention von NIP-AMB
+   (`educationalLevel:id` / `:prefLabel:de` / `:type`), damit vorhandenes
+   Tooling (`amb-nostr-converter`, EKW-Reader) die Werte ohne
+   Sonderbehandlung liest. Preis-Tags folgen der etablierten NIP-99-Form.
 5. **Entwürfe als Markdown, veröffentlichte Guides als HTML.** Neue Guides
    entstehen zuerst als Markdown (leicht zu reviewen und zu diskutieren, vgl.
    `ekw-metadata.md`). Nach Review und Klärung der offenen Punkte wird daraus

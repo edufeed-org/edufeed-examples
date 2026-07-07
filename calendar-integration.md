@@ -69,6 +69,10 @@ used, on purpose:
   (`<property>:id` / `<property>:prefLabel:<lang>` / `<property>:type` concept
   triples), so the same tooling that reads kind `30142` resources —
   including `amb-nostr-converter` — can read them off calendar events.
+  Their value lists are SKOS vocabularies published on
+  [nocabs.edufeed.org](https://nocabs.edufeed.org), Edufeed's Nostr vocabulary
+  hosting — the same place the EKW vocabularies live (see
+  [ekw-metadata.md](ekw-metadata.md)).
 
 ### 2.1 Registration (Anmeldung) — agreed: yes/no only
 
@@ -144,9 +148,12 @@ NIP-52 RSVP events (kind `31925`), which attendees publish themselves.
 ### 2.5 Educational level (Bildungsstufe) — vocabulary attribute
 
 The stage of the education system the event addresses. Uses the AMB property
-name `educationalLevel` with the KIM vocabulary
-[`https://w3id.org/kim/educationalLevel/`](https://w3id.org/kim/educationalLevel/),
-flattened exactly as on kind `30142` resources (see
+name `educationalLevel` with the
+[Bildungsstufe vocabulary on nocabs](https://nocabs.edufeed.org/vocab/npub16f5fut6pm2lm49fa5fn9t22vu24yuq5u8qlwjgwx5n02l2ue5cfqk7kc0l/educational-level) —
+a SKOS concept scheme that keeps the canonical KIM concept URIs
+([`https://w3id.org/kim/educationalLevel/`](https://w3id.org/kim/educationalLevel/)),
+so the `:id` values below are the same whether you resolve them via nocabs or
+via w3id.org. Flattened exactly as on kind `30142` resources (see
 [Section 5 of the data-pool guide](https://edufeed-org.github.io/edufeed-examples/amb-datapool.html#vocabularies)) —
 a concept triple per value, multi-valued by repeating the triple:
 
@@ -156,7 +163,7 @@ a concept triple per value, multi-valued by repeating the triple:
 ["educationalLevel:type", "Concept"]
 ```
 
-The vocabulary (ISCED-2011-aligned where applicable):
+The vocabulary as served by nocabs (ISCED-2011-aligned where applicable):
 
 | Concept URI (`…/educationalLevel/`) | prefLabel de | prefLabel en |
 |---|---|---|
@@ -319,5 +326,8 @@ values exactly as schema.org), `educationalLevel:*` (NIP-AMB concept triples).
 - Structured per-audience pricing (Personenkreis/Kosten/Währung list) — could
   become repeated `price` tags with a label element; deferred, description
   text is the interim answer.
-- Further vocabulary attributes: Bildungsbereiche, Zielgruppen (audience).
+- Further vocabulary attributes: Bildungsbereiche, Zielgruppen (audience) —
+  like `educationalLevel`, each to be published as a SKOS vocabulary on
+  [nocabs.edufeed.org](https://nocabs.edufeed.org) and flattened as NIP-AMB
+  concept triples.
 - Import relilab dates into edufeed.
