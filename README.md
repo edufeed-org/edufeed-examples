@@ -13,6 +13,13 @@ Nostr-basierte Bildungsmetadaten (AMB, `kind 30142`) und Kalender-Events
 | `calendar-integration.md` | Educational Calendar Events — integration guide (**Schreib-Seite**, NIP-52 + Edufeed-Erweiterung) — *Entwurf* |
 | `calendar-demo.html` | Educational Calendar Events — live demo (**Lese-Seite**) |
 | `ekw-metadata.md` | EKW-Extension-Spezifikation (`ext:ekw:*`) |
+| `amb-nostr-converter.esm.js` | Konverter-Bibliothek AMB ↔ Nostr-Tags (vom Guide-Widget genutzt) |
+| `examples/` | Beispiel-Events als JSON, z. B. ein reales relilab-Event mit Kalender-Erweiterung |
+
+Die Markdown-Guides (`calendar-integration.md`, `ekw-metadata.md`) werden von
+GitHub Pages als Rohtext ausgeliefert — Links auf sie zeigen deshalb auf die
+gerenderte GitHub-Ansicht (`github.com/...blob/main/...`), bis sie nach dem
+Review als HTML-Seiten veröffentlicht werden (siehe Arbeitsweise, Punkt 5).
 
 ## Sprachregelung (Terminologie)
 
@@ -31,9 +38,10 @@ wie zwei verschiedene Systeme wirkt, gilt durchgängig:
 - Dasselbe Muster gilt für Termine — Titelbegriff dort: **„Educational
   Calendar Events"** (integration guide ↔ live demo).
 - Feste Tag-Namen der Kalender-Erweiterung (beschlossen 2026-07-06):
-  `registrationRequired` (true/false), `price` (Betrag + Währung, Semantik
-  leer/0/>0), `eventAttendanceMode` (Name und Werte exakt wie schema.org),
-  `educationalLevel:*` (NIP-AMB-Konzept-Tripel).
+  `registrationRequired`, `price`, `eventAttendanceMode`,
+  `educationalLevel:*`. Maßgeblich für Semantik und Details ist
+  [calendar-integration.md, Abschnitt 6](calendar-integration.md#6-status-and-open-questions) —
+  hier nicht duplizieren.
 
 ## Arbeitsweise
 

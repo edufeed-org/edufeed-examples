@@ -12,12 +12,13 @@ This guide covers the **write side** of educational calendar events: how to
 publish [NIP-52](https://github.com/nostr-protocol/nips/blob/master/52.md)
 calendar events enriched with educational metadata into the Edufeed data pool.
 The **read side** — fetching and rendering — is shown in the
-[Educational Calendar Events live demo](calendar-demo.html). Both describe the
-same events.
+[Educational Calendar Events live demo](https://edufeed-org.github.io/edufeed-examples/calendar-demo.html).
+Both describe the same events (the demo reads the plain NIP-52 events published
+today; the extension attributes below are a draft).
 
 It is the calendar counterpart of the
-[Educational Data Pool integration guide](amb-datapool.html), which covers AMB
-resources (kind `30142` / NIP-AMB). Calendar events use the standard Nostr
+[Educational Data Pool integration guide](https://edufeed-org.github.io/edufeed-examples/amb-datapool.html),
+which covers AMB resources (kind `30142` / NIP-AMB). Calendar events use the standard Nostr
 calendar kinds and stay fully readable for any NIP-52 client; the educational
 attributes are **additive**.
 
@@ -28,7 +29,7 @@ attributes are **additive**.
 Educational events are ordinary NIP-52 events. Two kinds carry the events
 themselves (both are *addressable*, identified by `kind:pubkey:d-tag`, and
 updated by re-publishing the full event — same mechanics as described in
-[Section 4 of the data-pool guide](amb-datapool.html)):
+[Section 4 of the data-pool guide](https://edufeed-org.github.io/edufeed-examples/amb-datapool.html#updates-and-deletes)):
 
 | Kind | Meaning | `start` / `end` format |
 |------|---------|------------------------|
@@ -85,7 +86,7 @@ registration-link field.
 ### 2.2 Cost (Kosten) — agreed: price + currency
 
 Modelled on the `price` / `currency` fields of
-[NIP-15](https://nostrhub.edufeed.org/15#event-30018-create-or-update-a-product),
+[NIP-15](https://github.com/nostr-protocol/nips/blob/master/15.md#event-30018-create-or-update-a-product),
 encoded as one tag (shape follows NIP-99's `price` tag):
 
 ```
@@ -145,8 +146,9 @@ NIP-52 RSVP events (kind `31925`), which attendees publish themselves.
 The stage of the education system the event addresses. Uses the AMB property
 name `educationalLevel` with the KIM vocabulary
 [`https://w3id.org/kim/educationalLevel/`](https://w3id.org/kim/educationalLevel/),
-flattened exactly as on kind `30142` resources — a concept triple per value,
-multi-valued by repeating the triple:
+flattened exactly as on kind `30142` resources (see
+[Section 5 of the data-pool guide](https://edufeed-org.github.io/edufeed-examples/amb-datapool.html#vocabularies)) —
+a concept triple per value, multi-valued by repeating the triple:
 
 ```
 ["educationalLevel:id", "https://w3id.org/kim/educationalLevel/level_C"]
@@ -219,6 +221,9 @@ A NIP-52 client that knows nothing about the extension renders this as a
 normal calendar event; an education-aware client can additionally filter and
 display registration, cost, mode, and Bildungsstufe.
 
+A second, complete example built from a real relilab event lives in
+[`examples/relilab-impuls-kirchengeschichte-suedwesten-1.json`](examples/relilab-impuls-kirchengeschichte-suedwesten-1.json).
+
 ---
 
 ## 4. Publishing
@@ -236,47 +241,64 @@ nak event -k 31923 \
   -t "start_tzid=Europe/Berlin" \
   -t "registrationRequired=true" \
   -t "eventAttendanceMode=https://schema.org/OnlineEventAttendanceMode" \
+  -t "price=0;EUR" \
   -t "educationalLevel:id=https://w3id.org/kim/educationalLevel/level_C" \
   -t "educationalLevel:prefLabel:de=Fortbildung" \
   -t "educationalLevel:type=Concept" \
   -c "Eine offene Fortbildung zu Open Educational Resources. Anmeldung: siehe Veranstaltungsseite." \
   --sec nsec1... \
-  wss://relay.edufeed.org
+  wss://dev.amb-relay.edufeed.org
 ```
 
-(`price` needs a third tag element and can't be expressed with `nak -t`;
-publish the full JSON via `nak event --tags-json` or a client library instead.)
+(Multi-element tags like `price` use `;` as separator in `nak -t`:
+`-t "price=0;EUR"` produces `["price", "0", "EUR"]`. Alternatively, pipe a
+partial event JSON into `nak event` on stdin, or use one of the
+[client libraries](https://edufeed-org.github.io/edufeed-examples/amb-datapool.html#libraries).)
 
-For testing, use the development relay `wss://dev.amb-relay.edufeed.org`
-instead of the production relay.
+The command above targets the development relay
+`wss://dev.amb-relay.edufeed.org` — use it while testing; real events go to
+the production relay `wss://relay.edufeed.org`.
 
 Updates re-publish the full event under the same `d`-tag; deletion is NIP-09
 (kind `5` with an `a`-tag `31923:<pubkey>:<d>`), identical to the
-[data-pool guide, Section 4](amb-datapool.html).
+[data-pool guide, Section 4](https://edufeed-org.github.io/edufeed-examples/amb-datapool.html#updates-and-deletes).
 
 ---
 
 ## 5. Querying
 
-Standard NIP-01 filters:
+Fetch by kind (a standard NIP-01 filter) and match the extension tags
+client-side:
 
 ```jsonc
-// All calendar events
-{"kinds": [31922, 31923]}
+// All calendar events (bounded; close the subscription on EOSE)
+{"kinds": [31922, 31923], "limit": 500}
+```
 
-// By educational level (requires the relay to index this tag key — see below)
-{"kinds": [31922, 31923], "#educationalLevel:id": ["https://w3id.org/kim/educationalLevel/level_C"]}
+```js
+// Client-side: keep only events for a given educational level
+const wanted = "https://w3id.org/kim/educationalLevel/level_C";
+const hits = events.filter(ev =>
+  ev.tags.some(t => t[0] === "educationalLevel:id" && t[1] === wanted));
+```
+
+Once the calendar relay indexes the new tag keys — part of the planned relay
+adaptation (issue #13: "Kalender-Relay anpassen") — the same selection works
+relay-side. Note that multi-character tag filters like the following go beyond
+plain NIP-01 (which only defines single-letter `#x` filters); they are an
+Edufeed relay extension, the same one the AMB relay already answers for keys
+like `#about:id`:
+
+```jsonc
+// Future, once the relay indexes the key — not implemented yet
+{"kinds": [31922, 31923], "#educationalLevel:id": ["https://w3id.org/kim/educationalLevel/level_C"], "limit": 500}
 ```
 
 Notes:
 
 - "Upcoming" cannot be filtered relay-side: `since`/`until` match
   `created_at`, not the `start` tag. Fetch and filter client-side (this is
-  what the [live demo](calendar-demo.html) does).
-- Filtering on `#educationalLevel:id` (and the other new keys) only works
-  once the calendar relay indexes them — part of the planned relay adaptation
-  (issue #13: "Kalender-Relay anpassen"). Until then, fetch by kind and
-  filter client-side.
+  what the [live demo](https://edufeed-org.github.io/edufeed-examples/calendar-demo.html) does).
 
 ---
 
