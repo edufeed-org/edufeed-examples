@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Edufeed AMB Resources – Live demo &amp; docs</title>
+<title>Educational Data Pool — live demo · Edufeed</title>
 <style>
   :root {
     color-scheme: light;
@@ -176,13 +176,13 @@
 <div class="wrap">
 
 <header>
-  <h1>Edufeed AMB Resources</h1>
-  <p>Live demo &amp; documentation — how to read NIP-AMB learning resources from <code>amb-relay.edufeed.org</code> and render them in different designs.</p>
+  <h1>Educational Data Pool — live demo</h1>
+  <p>How to <strong>read</strong> AMB resources (Nostr <code>kind 30142</code>, specified by NIP-AMB) from the Educational Data Pool at <code>amb-relay.edufeed.org</code> and render them in different designs. The <strong>write side</strong> — publishing, querying, updating — is covered in the <a href="amb-datapool.html">Educational Data Pool integration guide</a>; both pages describe the same events.</p>
 </header>
 
 <section>
   <h2>What is NIP-AMB? <span class="pill">kind 30142</span></h2>
-  <p>NIP-AMB is the Edufeed convention for publishing educational resources on Nostr using the German <a href="https://w3id.org/kim/amb" target="_blank" rel="noopener">Allgemeines Metadatenprofil für Bildungsressourcen (AMB)</a> — a schema.org-aligned profile for OER and learning materials. Each event is an addressable resource (<code>kind 30142</code>) carrying both human-readable content and structured metadata as tags.</p>
+  <p><a href="https://git.edufeed.org/edufeed/nips/src/branch/edufeed-amb/AMB.md" target="_blank" rel="noopener">NIP-AMB</a> is the Edufeed specification for publishing educational resources on Nostr using the German <a href="https://w3id.org/kim/amb" target="_blank" rel="noopener">Allgemeines Metadatenprofil für Bildungsressourcen (AMB)</a> — a schema.org-aligned profile for OER and learning materials. It defines event <strong>kind <code>30142</code></strong>: wherever these guides say "kind 30142" or "NIP-AMB", they mean the same thing — the kind number is the on-the-wire format, NIP-AMB the specification behind it. Each event is an addressable <strong>AMB resource</strong> carrying both human-readable content and structured metadata as tags; the set of all such events on the Edufeed relays is the <strong>Educational Data Pool</strong>.</p>
   <div class="grid-docs">
     <div class="doc-card">
       <h3>Identity</h3>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Edufeed Educational Data Pool — integration guide</title>
+<title>Educational Data Pool — integration guide · Edufeed</title>
 <style>
   :root {
     color-scheme: light;
@@ -100,8 +100,8 @@
 <div class="wrap">
 
 <header>
-  <h1>Edufeed Educational Data Pool — integration guide</h1>
-  <p>How to consume, query, and convert Nostr kind 30142 / AMB educational metadata from the Edufeed data pool.</p>
+  <h1>Educational Data Pool — integration guide</h1>
+  <p>How to <strong>write</strong>, query, update, and convert AMB resources — Nostr events of <code>kind 30142</code>, specified by NIP-AMB — in the Edufeed Educational Data Pool. The <strong>read side</strong> of the same data — fetching and rendering — is shown in the <a href="amb-demo.html">Educational Data Pool live demo</a>.</p>
 </header>
 
 <!-- ===== Section 1: What's stored ===================================== -->
@@ -112,8 +112,10 @@
     <a href="https://dini-ag-kim.github.io/amb/latest/" target="_blank" rel="noopener">Allgemeines Metadatenprofil für Bildungsressourcen (AMB)</a>.
     An event is uniquely identified by its three-part coordinate <code>kind:pubkey:d-tag</code> — the <code>d</code> tag typically holds the
     canonical resource URL. Metadata is stored as flat Nostr tags using <code>:</code> as a nesting delimiter. The exact
-    on-the-wire mapping — which AMB property becomes which Nostr tag — is defined in the
-    <a href="https://git.edufeed.org/edufeed/nips/src/branch/edufeed-amb/AMB.md" target="_blank" rel="noopener">Nostr-AMB specification (kind 30142)</a>.
+    on-the-wire mapping — which AMB property becomes which Nostr tag — is defined in
+    <a href="https://git.edufeed.org/edufeed/nips/src/branch/edufeed-amb/AMB.md" target="_blank" rel="noopener"><strong>NIP-AMB</strong></a>,
+    the specification that defines kind <code>30142</code>. "Kind 30142" and "NIP-AMB" always refer to the same event format —
+    the number is what goes over the wire, NIP-AMB is the document that specifies it.
   </p>
   <p>
     <strong>What "addressable" means.</strong> Nostr defines four event-storage behaviours by kind range
@@ -322,7 +324,7 @@ nak req -k 30142 --search "evangelisch" wss://amb-relay.edufeed.org</code></pre>
 
 <!-- ===== Section 4: Updates & deletions =============================== -->
 <section>
-  <h2>4. How events are updated or deleted</h2>
+  <h2 id="updates-and-deletes">4. How events are updated or deleted</h2>
   <p>
     Kind 30142 is an <strong>addressable (parameterized replaceable) event</strong>. When a client publishes a new
     event with the same <code>(kind, pubkey, d-tag)</code> triple, relays keep only the newest
@@ -349,7 +351,7 @@ nak req -k 30142 --search "evangelisch" wss://amb-relay.edufeed.org</code></pre>
 
 <!-- ===== Section 5: Categorisation / vocabularies ===================== -->
 <section>
-  <h2>5. Categorisation and controlled vocabularies</h2>
+  <h2 id="vocabularies">5. Categorisation and controlled vocabularies</h2>
   <p>
     Classification uses SKOS-aligned <strong>controlled vocabularies</strong>. Every concept carries its vocabulary URI
     (<code>:id</code>), a human-readable label (<code>:prefLabel:&lt;lang&gt;</code>), and the type marker
@@ -534,7 +536,7 @@ amb-convert nostr:amb event.json</code></pre>
 
 <!-- ===== Section 8: Client libraries ================================= -->
 <section>
-  <h2>8. Client libraries by language</h2>
+  <h2 id="libraries">8. Client libraries by language</h2>
   <p>
     Everything in this guide is plain Nostr, so <strong>any</strong> Nostr library can read, write, and query kind
     30142 events — no Edufeed-specific SDK is required. A few well-maintained options per language:
