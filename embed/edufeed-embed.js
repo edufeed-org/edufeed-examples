@@ -6,6 +6,7 @@
  *
  *   <div data-edufeed="events" data-limit="5"></div>
  *   <div data-edufeed="materials" data-subject="Religion"></div>
+ *   <div data-edufeed="search" data-placeholder="Material suchen…"></div>
  *   <script src="https://edufeed-org.github.io/edufeed-examples/embed/edufeed-embed.js"></script>
  *
  * Attributes (all optional):
@@ -18,11 +19,14 @@
  *   events only:
  *     data-when     "upcoming" | "all" | "past"  (default upcoming)
  *     data-kinds    comma list, default "31922,31923"
- *   materials only:
- *     data-search   full-text search (NIP-50, server side)
+ *   materials and search:
+ *     data-search   full-text search (NIP-50, server side); for "search" the initial query
  *     data-keyword  exact keyword / t-tag
  *     data-subject  subject label, e.g. "Religion" (client side, prefLabel:de)
  *     data-language inLanguage code, e.g. "de"
+ *   search only (interactive search box over materials):
+ *     data-placeholder  placeholder text of the input field
+ *     data-min          minimum characters before searching (default 2)
  *
  * Programmatic: EdufeedEmbed.mount(element, { type: 'events', limit: 5 })
  * Source: https://github.com/edufeed-org/edufeed-examples
@@ -37,10 +41,14 @@
   var I18N = {
     de: { loading: 'Lade Daten von Edufeed…', error: 'Daten konnten nicht geladen werden.', empty: 'Nichts gefunden.',
           allday: 'ganztägig', noimage: 'kein Bild', free: 'kostenlos',
+          placeholder: 'Lernmaterial suchen…', searchBtn: 'Suchen', hint: 'Suchbegriff eingeben – z. B. Advent, Schöpfung, Demokratie',
+          hits: function (n) { return n === 1 ? '1 Treffer' : n + ' Treffer'; },
           wkd: ['So','Mo','Di','Mi','Do','Fr','Sa'],
           mon: ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'] },
     en: { loading: 'Loading from Edufeed…', error: 'Could not load data.', empty: 'Nothing found.',
           allday: 'all day', noimage: 'no image', free: 'free',
+          placeholder: 'Search learning resources…', searchBtn: 'Search', hint: 'Type a search term – e.g. climate, democracy',
+          hits: function (n) { return n === 1 ? '1 result' : n + ' results'; },
           wkd: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],
           mon: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'] }
   };
@@ -71,6 +79,12 @@
 .ef-embed .ef-row .ef-date span{font-size:11px;color:#5f6776;text-transform:uppercase}\
 .ef-embed .ef-row .ef-lthumb{width:64px;height:48px;border-radius:4px;background:#f3f1ea center/cover no-repeat}\
 .ef-embed .ef-row .ef-title{font-size:14px}\
+.ef-embed .ef-search{display:flex;gap:8px;margin-bottom:12px}\
+.ef-embed .ef-search input{flex:1;min-width:0;font:inherit;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#1f2533}\
+.ef-embed .ef-search input:focus{outline:2px solid #2a5db0;outline-offset:0;border-color:#2a5db0}\
+.ef-embed .ef-search button{font:inherit;font-weight:600;padding:8px 16px;border:0;border-radius:8px;background:#2a5db0;color:#fff;cursor:pointer}\
+.ef-embed .ef-search button:hover{background:#234d93}\
+.ef-embed .ef-count{font-size:12.5px;color:#6b7280;margin:0 0 8px}\
 .ef-embed .ef-row .ef-sub{font-size:12.5px;color:#5f6776;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}\
 ';
 
@@ -297,11 +311,13 @@
     var d = el.dataset || {};
     var o = {
       type: d.edufeed || 'events', relay: d.relay, limit: d.limit, layout: d.layout, lang: d.lang, author: d.author,
-      when: d.when, kinds: d.kinds, search: d.search, keyword: d.keyword, subject: d.subject, language: d.language
+      when: d.when, kinds: d.kinds, search: d.search, keyword: d.keyword, subject: d.subject, language: d.language,
+      placeholder: d.placeholder, min: d.min
     };
     for (var k in (overrides || {})) o[k] = overrides[k];
-    o.type = o.type === 'materials' ? 'materials' : 'events';
-    o.relay = o.relay || DEFAULT_RELAY[o.type];
+    o.type = ['materials', 'search'].indexOf(o.type) >= 0 ? o.type : 'events';
+    o.relay = o.relay || DEFAULT_RELAY[o.type === 'events' ? 'events' : 'materials'];
+    o.min = Math.max(1, parseInt(o.min, 10) || 2);
     o.limit = Math.max(1, Math.min(RELAY_MAX, parseInt(o.limit, 10) || 12));
     o.layout = o.layout === 'list' ? 'list' : 'cards';
     o.t = I18N[o.lang] || I18N.de;
@@ -311,10 +327,36 @@
     if (!o.kinds.length) o.kinds = [31922, 31923];
     return o;
   }
+  // Interactive search box: input + live results from the relay's NIP-50 search.
+  function mountSearch(el, o) {
+    var t = o.t, timer = null, seq = 0;
+    el.innerHTML = '<form class="ef-search" role="search"><input type="search" autocomplete="off" placeholder="' + esc(o.placeholder || t.placeholder) + '">' +
+      '<button type="submit">' + t.searchBtn + '</button></form><div class="ef-results"><div class="ef-status">' + t.hint + '</div></div>';
+    var form = el.querySelector('form'), input = el.querySelector('input'), out = el.querySelector('.ef-results');
+    function run(q) {
+      q = (q || '').trim();
+      if (q.length < o.min) { out.innerHTML = '<div class="ef-status">' + t.hint + '</div>'; return; }
+      var my = ++seq;
+      out.innerHTML = '<div class="ef-status">' + t.loading + '</div>';
+      var opts = {}; for (var k in o) opts[k] = o[k]; opts.search = q;
+      loadMaterials(opts, function (err, list) {
+        if (my !== seq) return; // a newer query is in flight
+        if (err) { out.innerHTML = '<div class="ef-status ef-error">' + t.error + '</div>'; if (window.console) console.warn('edufeed-embed:', err); return; }
+        out.innerHTML = list.length ? '<p class="ef-count">' + t.hits(list.length) + '</p>' + renderMaterials(list, o) : '<div class="ef-status">' + t.empty + '</div>';
+        try { el.dispatchEvent(new CustomEvent('edufeed:loaded', { detail: { items: list, options: opts, query: q } })); } catch (e) {}
+      });
+    }
+    form.addEventListener('submit', function (ev) { ev.preventDefault(); clearTimeout(timer); run(input.value); });
+    input.addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(function () { run(input.value); }, 400); });
+    if (o.search) { input.value = o.search; run(o.search); }
+    return el;
+  }
+
   function mount(el, overrides) {
     injectCss();
     var o = optsFrom(el, overrides);
     el.classList.add('ef-embed');
+    if (o.type === 'search') return mountSearch(el, o);
     el.innerHTML = '<div class="ef-status">' + o.t.loading + '</div>';
     var load = o.type === 'materials' ? loadMaterials : loadEvents;
     var render = o.type === 'materials' ? renderMaterials : renderEvents;
@@ -331,7 +373,7 @@
     return nodes.length;
   }
 
-  window.EdufeedEmbed = { mount: mount, mountAll: mountAll, version: '0.1.0' };
+  window.EdufeedEmbed = { mount: mount, mountAll: mountAll, version: '0.2.0' };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { mountAll(); });
   else mountAll();
 })();
