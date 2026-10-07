@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Edufeed Embed – HTML-Snippets zum Einbinden</title>
+<meta name="description" content="Copy-paste HTML snippets (kein iframe, kein Build) zum Einbinden von Edufeed-Terminen und Lernmaterialien in beliebige Webseiten und CMS-HTML-Boxen.">
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #fbfaf6; --panel: #ffffff; --panel-2: #f3f1ea; --border: #e3dfd4;
+    --text: #1f2533; --muted: #5f6776; --accent: #2a5db0; --accent-soft: #eaf0fa;
+    --accent-2: #b8651b; --code-bg: #1f2533;
+    --shadow: 0 1px 2px rgba(31,37,51,.05), 0 6px 20px rgba(31,37,51,.07);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); }
+  body { line-height: 1.5; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 32px 20px 80px; }
+  header h1 { margin: 0 0 6px; font-size: 28px; letter-spacing: -.01em; }
+  header p { margin: 0; color: var(--muted); }
+  section { margin-top: 36px; }
+  h2 { font-size: 20px; margin: 0 0 12px; letter-spacing: -.01em; }
+  h2 .pill { font-size: 11px; font-weight: 600; color: var(--accent); border: 1px solid var(--border); padding: 2px 8px; border-radius: 999px; margin-left: 8px; vertical-align: middle; }
+  h3 { font-size: 16px; margin: 22px 0 8px; }
+  p { margin: 0 0 12px; }
+  a { color: var(--accent); }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  code { background: var(--panel-2); padding: 1px 6px; border-radius: 4px; font-size: 13px; }
+  pre { background: var(--code-bg); color: #e9edf5; padding: 14px 16px; border-radius: 8px; overflow-x: auto; font-size: 12.5px; line-height: 1.55; position: relative; }
+  pre code { background: transparent; padding: 0; border-radius: 0; font-size: inherit; color: inherit; }
+  pre .copy { position: absolute; top: 8px; right: 8px; background: #2a3344; color: #e9edf5; border: 0; border-radius: 5px; padding: 3px 9px; font: inherit; font-size: 11.5px; cursor: pointer; }
+  pre .copy:hover { background: var(--accent); }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { background: var(--panel-2); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  tr:last-child td { border-bottom: 0; }
+  .demo { background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin: 10px 0 20px; }
+  .demo-label { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; margin-bottom: 10px; }
+  .note { background: var(--accent-soft); border-left: 3px solid var(--accent); padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 14px; margin: 14px 0; }
+  .note.warn { background: #fdf3e7; border-left-color: var(--accent-2); }
+  .grid-docs { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+  .doc-card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .doc-card h3 { margin: 0 0 6px; font-size: 14px; color: var(--accent); }
+  .doc-card p, .doc-card ul { margin: 0; color: var(--muted); font-size: 13.5px; }
+  .doc-card ul { padding-left: 18px; }
+  .small { font-size: 12.5px; color: var(--muted); }
+  hr.sep { border: 0; border-top: 1px solid var(--border); margin: 24px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Edufeed einbinden – HTML-Snippets</h1>
+  <p>Termine und Lernmaterialien aus Edufeed in jede Webseite einbetten – ein <code>&lt;div&gt;</code>, ein <code>&lt;script&gt;</code>, fertig. Kein iframe, kein Build, keine Abhängigkeiten.</p>
+</header>
+
+<section>
+  <h2>Schnellstart <span class="pill">copy &amp; paste</span></h2>
+  <p>Das Snippet funktioniert überall, wo man eigenes HTML einfügen darf – HTML-Boxen in CMS, Moodle-Textblöcke, statische Seiten. Es lädt die Daten direkt per WebSocket vom Relay und rendert sie an Ort und Stelle. Mehrere Boxen auf einer Seite sind kein Problem; das Script muss nur einmal eingebunden werden.</p>
+  <pre><button class="copy">Kopieren</button><code>&lt;!-- Kommende Termine --&gt;
+&lt;div data-edufeed="events" data-limit="5"&gt;&lt;/div&gt;
+
+&lt;!-- Lernmaterialien zum Fach Religion --&gt;
+&lt;div data-edufeed="materials" data-subject="Religion" data-limit="8"&gt;&lt;/div&gt;
+
+&lt;script src="https://edufeed-org.github.io/edufeed-examples/embed/edufeed-embed.js"&gt;&lt;/script&gt;</code></pre>
+  <div class="note">Das Script am besten <strong>nach</strong> den <code>&lt;div&gt;</code>s einfügen. Wird es früher geladen, bindet es sich trotzdem nach dem Laden der Seite an alle <code>data-edufeed</code>-Elemente.</div>
+</section>
+
+<section>
+  <h2>Termine <span class="pill">NIP-52 · relay.edufeed.org</span></h2>
+
+  <h3>Kommende Termine als Karten</h3>
+  <pre><button class="copy">Kopieren</button><code>&lt;div data-edufeed="events" data-limit="6"&gt;&lt;/div&gt;</code></pre>
+  <div class="demo"><div class="demo-label">Live</div>
+    <div data-edufeed="events" data-limit="6"></div>
+  </div>
+
+  <h3>Kompakte Liste</h3>
+  <pre><button class="copy">Kopieren</button><code>&lt;div data-edufeed="events" data-layout="list" data-limit="8"&gt;&lt;/div&gt;</code></pre>
+  <div class="demo"><div class="demo-label">Live</div>
+    <div data-edufeed="events" data-layout="list" data-limit="8"></div>
+  </div>
+
+  <h3>Nur Termine eines bestimmten Veranstalters</h3>
+  <p>Mit <code>data-author</code> lassen sich Termine auf einen Nostr-Schlüssel einschränken – als <code>npub…</code> oder Hex. Vergangene Termine zeigt <code>data-when="past"</code>, alle <code>data-when="all"</code>.</p>
+  <pre><button class="copy">Kopieren</button><code>&lt;div data-edufeed="events" data-author="npub1…" data-when="all" data-layout="list"&gt;&lt;/div&gt;</code></pre>
+</section>
+
+<section>
+  <h2>Lernmaterialien <span class="pill">NIP-AMB · amb-relay.edufeed.org</span></h2>
+
+  <h3>Neueste Materialien zu einem Fach</h3>
+  <pre><button class="copy">Kopieren</button><code>&lt;div data-edufeed="materials" data-subject="Religion" data-limit="8"&gt;&lt;/div&gt;</code></pre>
+  <div class="demo"><div class="demo-label">Live</div>
+    <div data-edufeed="materials" data-subject="Religion" data-limit="8"></div>
+  </div>
+
+  <h3>Volltextsuche als Liste</h3>
+  <p><code>data-search</code> nutzt die Suche des Relays (NIP-50) – die Treffer kommen nach Relevanz sortiert.</p>
+  <pre><button class="copy">Kopieren</button><code>&lt;div data-edufeed="materials" data-search="Schöpfung" data-layout="list" data-limit="6"&gt;&lt;/div&gt;</code></pre>
+  <div class="demo"><div class="demo-label">Live</div>
+    <div data-edufeed="materials" data-search="Schöpfung" data-layout="list" data-limit="6"></div>
+  </div>
+</section>
+
+<section>
+  <h2>Alle Optionen</h2>
+  <table>
+    <tr><th>Attribut</th><th>Gilt für</th><th>Bedeutung</th><th>Standard</th></tr>
+    <tr><td><code>data-edufeed</code></td><td>–</td><td><code>events</code> oder <code>materials</code></td><td>events</td></tr>
+    <tr><td><code>data-relay</code></td><td>beide</td><td>WebSocket-URL des Relays</td><td>wss://relay.edufeed.org bzw. wss://amb-relay.edufeed.org</td></tr>
+    <tr><td><code>data-limit</code></td><td>beide</td><td>Maximale Anzahl Einträge (1–250)</td><td>12</td></tr>
+    <tr><td><code>data-layout</code></td><td>beide</td><td><code>cards</code> oder <code>list</code></td><td>cards</td></tr>
+    <tr><td><code>data-lang</code></td><td>beide</td><td>Sprache der Beschriftungen: <code>de</code> oder <code>en</code></td><td>de</td></tr>
+    <tr><td><code>data-author</code></td><td>beide</td><td>Nur Einträge dieses Autors (npub oder Hex-Pubkey)</td><td>–</td></tr>
+    <tr><td><code>data-when</code></td><td>events</td><td><code>upcoming</code>, <code>past</code> oder <code>all</code></td><td>upcoming</td></tr>
+    <tr><td><code>data-kinds</code></td><td>events</td><td><code>31922</code> (ganztägig), <code>31923</code> (mit Uhrzeit) oder beide</td><td>31922,31923</td></tr>
+    <tr><td><code>data-search</code></td><td>materials</td><td>Volltextsuche (serverseitig, NIP-50)</td><td>–</td></tr>
+    <tr><td><code>data-keyword</code></td><td>materials</td><td>Exaktes Schlagwort (<code>t</code>-Tag)</td><td>–</td></tr>
+    <tr><td><code>data-subject</code></td><td>materials</td><td>Fach-Bezeichnung, z.&nbsp;B. <code>Religion</code> (clientseitig, <code>about:prefLabel:de</code>)</td><td>–</td></tr>
+    <tr><td><code>data-language</code></td><td>materials</td><td>Sprachcode des Materials, z.&nbsp;B. <code>de</code></td><td>–</td></tr>
+  </table>
+
+  <h3>Aus eigenem JavaScript</h3>
+  <p>Das Script stellt <code>window.EdufeedEmbed</code> bereit. Damit lassen sich Boxen auch dynamisch anlegen, z.&nbsp;B. nach einem Klick oder mit Werten aus dem eigenen System:</p>
+  <pre><button class="copy">Kopieren</button><code>EdufeedEmbed.mount(document.getElementById('box'), {
+  type: 'materials', search: 'Advent', layout: 'list', limit: 5
+});
+
+// Wenn die Daten da sind, feuert das Element ein Event:
+box.addEventListener('edufeed:loaded', e =&gt; console.log(e.detail.items));</code></pre>
+
+  <h3>Eigenes Aussehen</h3>
+  <p>Alle Elemente tragen Klassen mit Präfix <code>ef-</code> (<code>.ef-card</code>, <code>.ef-row</code>, <code>.ef-title</code>, <code>.ef-badge</code>, …). Eigene CSS-Regeln, die nach dem Script geladen werden oder spezifischer sind, überschreiben das mitgelieferte Styling. Schriftart und Textfarbe erbt das Widget von der umgebenden Seite.</p>
+</section>
+
+<section>
+  <h2>Was man wissen sollte</h2>
+  <div class="grid-docs">
+    <div class="doc-card">
+      <h3>Technische Voraussetzungen</h3>
+      <ul>
+        <li>Die Seite muss eigenes <code>&lt;script&gt;</code> erlauben (manche CMS filtern das in HTML-Boxen heraus).</li>
+        <li>Eine Content-Security-Policy darf <code>wss://*.edufeed.org</code> und <code>edufeed-org.github.io</code> nicht blockieren.</li>
+        <li>Die Daten werden beim Seitenaufruf live vom Relay geladen – kein Caching, kein Server dazwischen.</li>
+      </ul>
+    </div>
+    <div class="doc-card">
+      <h3>Nur lesen</h3>
+      <p>Das Snippet zeigt Daten an. Zum <strong>Eintragen</strong> von Material oder Terminen braucht es einen Nostr-Schlüssel zum Signieren und Schreibrechte auf dem Relay – das Edufeed-Material-Relay akzeptiert nur freigeschaltete Autoren. Ein Eingabe-Snippet ist in Vorbereitung; bis dahin: <a href="https://app.edufeed.org" target="_blank" rel="noopener">app.edufeed.org</a> oder per CLI mit <code>nak</code> (siehe <a href="../amb-datapool.html">Data-Pool-Guide</a>).</p>
+    </div>
+    <div class="doc-card">
+      <h3>Selbst hosten</h3>
+      <p>Die Datei <a href="edufeed-embed.js">edufeed-embed.js</a> ist eine einzelne, abhängigkeitsfreie JavaScript-Datei – sie kann auch auf den eigenen Server kopiert und von dort eingebunden werden. Wer tiefer einsteigen will: die <a href="../calendar-demo.html">Termin-</a> und <a href="../amb-demo.html">Material-Demos</a> zeigen das Protokoll Schritt für Schritt.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="sep">
+<p class="small">Quelle: <a href="https://github.com/edufeed-org/edufeed-examples">github.com/edufeed-org/edufeed-examples</a> · Lizenz siehe Repository.</p>
+
+</div>
+
+<script src="edufeed-embed.js"></script>
+<script>
+  document.querySelectorAll('pre .copy').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var code = btn.parentNode.querySelector('code').textContent;
+      navigator.clipboard.writeText(code).then(function () {
+        btn.textContent = 'Kopiert ✓'; setTimeout(function () { btn.textContent = 'Kopieren'; }, 1500);
+      });
+    });
+  });
+</script>
+</body>
+</html>
