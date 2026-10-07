@@ -66,6 +66,9 @@
 &lt;!-- Lernmaterialien zum Fach Religion --&gt;
 &lt;div data-edufeed="materials" data-subject="Religion" data-limit="8"&gt;&lt;/div&gt;
 
+&lt;!-- Interaktive Suche über alle Materialien --&gt;
+&lt;div data-edufeed="search"&gt;&lt;/div&gt;
+
 &lt;script src="https://edufeed-org.github.io/edufeed-examples/embed/edufeed-embed.js"&gt;&lt;/script&gt;</code></pre>
   <div class="note">Das Script am besten <strong>nach</strong> den <code>&lt;div&gt;</code>s einfügen. Wird es früher geladen, bindet es sich trotzdem nach dem Laden der Seite an alle <code>data-edufeed</code>-Elemente.</div>
 </section>
@@ -108,10 +111,25 @@
 </section>
 
 <section>
+  <h2>Interaktive Suche <span class="pill">NIP-50 · amb-relay.edufeed.org</span></h2>
+  <p>Ein Suchfeld, in dem Besucher:innen selbst suchen. Die Anfrage geht live an die Volltextsuche des Relays, Treffer erscheinen beim Tippen (ab 2 Zeichen) oder nach Enter. Mit <code>data-search</code> lässt sich eine Startsuche vorbelegen, mit <code>data-subject</code>, <code>data-language</code> oder <code>data-author</code> der Suchraum einschränken.</p>
+  <pre><button class="copy">Kopieren</button><code>&lt;div data-edufeed="search" data-placeholder="Lernmaterial suchen…" data-limit="12"&gt;&lt;/div&gt;</code></pre>
+  <div class="demo"><div class="demo-label">Live – einfach tippen</div>
+    <div data-edufeed="search" data-placeholder="Lernmaterial suchen…" data-limit="12"></div>
+  </div>
+
+  <h3>Suche als kompakte Liste, auf ein Fach begrenzt</h3>
+  <pre><button class="copy">Kopieren</button><code>&lt;div data-edufeed="search" data-subject="Religion" data-layout="list" data-search="Advent"&gt;&lt;/div&gt;</code></pre>
+  <div class="demo"><div class="demo-label">Live</div>
+    <div data-edufeed="search" data-subject="Religion" data-layout="list" data-search="Advent" data-limit="8"></div>
+  </div>
+</section>
+
+<section>
   <h2>Alle Optionen</h2>
   <table>
     <tr><th>Attribut</th><th>Gilt für</th><th>Bedeutung</th><th>Standard</th></tr>
-    <tr><td><code>data-edufeed</code></td><td>–</td><td><code>events</code> oder <code>materials</code></td><td>events</td></tr>
+    <tr><td><code>data-edufeed</code></td><td>–</td><td><code>events</code>, <code>materials</code> oder <code>search</code> (interaktives Suchfeld über Materialien)</td><td>events</td></tr>
     <tr><td><code>data-relay</code></td><td>beide</td><td>WebSocket-URL des Relays</td><td>wss://relay.edufeed.org bzw. wss://amb-relay.edufeed.org</td></tr>
     <tr><td><code>data-limit</code></td><td>beide</td><td>Maximale Anzahl Einträge (1–250)</td><td>12</td></tr>
     <tr><td><code>data-layout</code></td><td>beide</td><td><code>cards</code> oder <code>list</code></td><td>cards</td></tr>
@@ -119,10 +137,12 @@
     <tr><td><code>data-author</code></td><td>beide</td><td>Nur Einträge dieses Autors (npub oder Hex-Pubkey)</td><td>–</td></tr>
     <tr><td><code>data-when</code></td><td>events</td><td><code>upcoming</code>, <code>past</code> oder <code>all</code></td><td>upcoming</td></tr>
     <tr><td><code>data-kinds</code></td><td>events</td><td><code>31922</code> (ganztägig), <code>31923</code> (mit Uhrzeit) oder beide</td><td>31922,31923</td></tr>
-    <tr><td><code>data-search</code></td><td>materials</td><td>Volltextsuche (serverseitig, NIP-50)</td><td>–</td></tr>
-    <tr><td><code>data-keyword</code></td><td>materials</td><td>Exaktes Schlagwort (<code>t</code>-Tag)</td><td>–</td></tr>
-    <tr><td><code>data-subject</code></td><td>materials</td><td>Fach-Bezeichnung, z.&nbsp;B. <code>Religion</code> (clientseitig, <code>about:prefLabel:de</code>)</td><td>–</td></tr>
-    <tr><td><code>data-language</code></td><td>materials</td><td>Sprachcode des Materials, z.&nbsp;B. <code>de</code></td><td>–</td></tr>
+    <tr><td><code>data-search</code></td><td>materials, search</td><td>Volltextsuche (serverseitig, NIP-50); bei <code>search</code> die vorbelegte Startsuche</td><td>–</td></tr>
+    <tr><td><code>data-keyword</code></td><td>materials, search</td><td>Exaktes Schlagwort (<code>t</code>-Tag)</td><td>–</td></tr>
+    <tr><td><code>data-subject</code></td><td>materials, search</td><td>Fach-Bezeichnung, z.&nbsp;B. <code>Religion</code> (clientseitig, <code>about:prefLabel:de</code>)</td><td>–</td></tr>
+    <tr><td><code>data-language</code></td><td>materials, search</td><td>Sprachcode des Materials, z.&nbsp;B. <code>de</code></td><td>–</td></tr>
+    <tr><td><code>data-placeholder</code></td><td>search</td><td>Platzhaltertext im Suchfeld</td><td>Lernmaterial suchen…</td></tr>
+    <tr><td><code>data-min</code></td><td>search</td><td>Mindestzahl Zeichen, ab der gesucht wird</td><td>2</td></tr>
   </table>
 
   <h3>Aus eigenem JavaScript</h3>
@@ -132,7 +152,8 @@
 });
 
 // Wenn die Daten da sind, feuert das Element ein Event:
-box.addEventListener('edufeed:loaded', e =&gt; console.log(e.detail.items));</code></pre>
+box.addEventListener('edufeed:loaded', e =&gt; console.log(e.detail.items));
+// Beim Suchfeld enthält e.detail.query zusätzlich den gesuchten Begriff.</code></pre>
 
   <h3>Eigenes Aussehen</h3>
   <p>Alle Elemente tragen Klassen mit Präfix <code>ef-</code> (<code>.ef-card</code>, <code>.ef-row</code>, <code>.ef-title</code>, <code>.ef-badge</code>, …). Eigene CSS-Regeln, die nach dem Script geladen werden oder spezifischer sind, überschreiben das mitgelieferte Styling. Schriftart und Textfarbe erbt das Widget von der umgebenden Seite.</p>
