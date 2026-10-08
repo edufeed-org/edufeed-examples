@@ -150,7 +150,7 @@
     <tr><td><code>data-lang</code></td><td>beide</td><td>Sprache der Beschriftungen: <code>de</code> oder <code>en</code></td><td>de</td></tr>
     <tr><td><code>data-author</code></td><td>beide</td><td>Nur Einträge, die mit diesem Schlüssel signiert wurden (npub oder Hex-Pubkey)</td><td>–</td></tr>
     <tr><td><code>data-community</code></td><td>beide</td><td>Nur Einträge, die in diese Edufeed-Community geteilt wurden (npub oder Hex-Pubkey der Community, <code>h</code>-Tag); kombinierbar mit <code>data-author</code></td><td>–</td></tr>
-    <tr><td><code>data-when</code></td><td>events</td><td><code>upcoming</code>, <code>past</code> oder <code>all</code></td><td>upcoming</td></tr>
+    <tr><td><code>data-when</code></td><td>events</td><td><code>upcoming</code>, <code>past</code> oder <code>all</code>. Bei <code>upcoming</code> kommen heutige und künftige Termine zuerst (nach Beginn), dahinter noch laufende, die an einem früheren Tag begonnen haben (z.&nbsp;B. mehrmonatige Kurse)</td><td>upcoming</td></tr>
     <tr><td><code>data-kinds</code></td><td>events</td><td><code>31922</code> (ganztägig), <code>31923</code> (mit Uhrzeit) oder beide</td><td>31922,31923</td></tr>
     <tr><td><code>data-search</code></td><td>materials, search</td><td>Volltextsuche (serverseitig, NIP-50); bei <code>search</code> die vorbelegte Startsuche</td><td>–</td></tr>
     <tr><td><code>data-keyword</code></td><td>materials, search</td><td>Exaktes Schlagwort (<code>t</code>-Tag)</td><td>–</td></tr>
@@ -183,6 +183,7 @@ box.addEventListener('edufeed:loaded', e =&gt; console.log(e.detail.items));
         <li>Die Seite muss eigenes <code>&lt;script&gt;</code> erlauben (manche CMS filtern das in HTML-Boxen heraus).</li>
         <li>Eine Content-Security-Policy darf <code>wss://*.edufeed.org</code> und <code>edufeed-org.github.io</code> nicht blockieren.</li>
         <li>Die Daten werden beim Seitenaufruf live vom Relay geladen – kein Caching, kein Server dazwischen.</li>
+        <li>Termine: Relays können nicht nach Startdatum filtern. Das Widget lädt deshalb alle Kalender-Events des Relays seitenweise (500 pro Anfrage, eine Verbindung) und filtert selbst – bei einigen tausend Terminen etwa 1–3 Sekunden.</li>
       </ul>
     </div>
     <div class="doc-card">
