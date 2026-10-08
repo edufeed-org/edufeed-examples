@@ -88,6 +88,20 @@
     <div data-edufeed="events" data-layout="list" data-limit="8"></div>
   </div>
 
+  <h3>Zeitraum: heute, nächste Tage, fester Zeitraum</h3>
+  <p>Ohne weitere Angabe zeigt das Widget <strong>kommende</strong> Termine (<code>data-when="upcoming"</code>): heutige und künftige zuerst, dahinter laufende Kurse, die früher begonnen haben. <code>data-when="today"</code> zeigt alles, was heute stattfindet, <code>data-days="7"</code> begrenzt kommende Termine auf die nächsten sieben Tage (bei <code>past</code>: die letzten sieben). Mit <code>data-from</code> und <code>data-to</code> (<code>JJJJ-MM-TT</code>, <code>to</code> inklusive) lässt sich ein fester Zeitraum wählen, etwa für eine Jahresübersicht.</p>
+  <pre><button class="copy">Kopieren</button><code>&lt;!-- Heute --&gt;
+&lt;div data-edufeed="events" data-when="today" data-layout="list"&gt;&lt;/div&gt;
+
+&lt;!-- Die nächsten 7 Tage --&gt;
+&lt;div data-edufeed="events" data-days="7" data-limit="20"&gt;&lt;/div&gt;
+
+&lt;!-- Fester Zeitraum --&gt;
+&lt;div data-edufeed="events" data-from="2026-11-01" data-to="2026-11-30"&gt;&lt;/div&gt;</code></pre>
+  <div class="demo"><div class="demo-label">Live – heute</div>
+    <div data-edufeed="events" data-when="today" data-layout="list" data-limit="8"></div>
+  </div>
+
   <h3>Nur Termine eines bestimmten Veranstalters</h3>
   <p>Mit <code>data-author</code> lassen sich Termine auf einen Nostr-Schlüssel einschränken – als <code>npub…</code> oder Hex. Vergangene Termine zeigt <code>data-when="past"</code>, alle <code>data-when="all"</code>.</p>
   <pre><button class="copy">Kopieren</button><code>&lt;div data-edufeed="events" data-author="npub1…" data-when="all" data-layout="list"&gt;&lt;/div&gt;</code></pre>
@@ -151,7 +165,9 @@
     <tr><td><code>data-lang</code></td><td>beide</td><td>Sprache der Beschriftungen: <code>de</code> oder <code>en</code></td><td>de</td></tr>
     <tr><td><code>data-author</code></td><td>beide</td><td>Nur Einträge, die mit diesem Schlüssel signiert wurden (npub oder Hex-Pubkey). Mehrere Schlüssel durch Komma getrennt: „von einem davon“</td><td>–</td></tr>
     <tr><td><code>data-community</code></td><td>beide</td><td>Nur Einträge, die in diese Edufeed-Community geteilt wurden (npub oder Hex-Pubkey der Community, <code>h</code>-Tag). Mehrere Communities durch Komma getrennt: „in einer davon“; kombinierbar mit <code>data-author</code></td><td>–</td></tr>
-    <tr><td><code>data-when</code></td><td>events</td><td><code>upcoming</code>, <code>past</code> oder <code>all</code>. Bei <code>upcoming</code> kommen heutige und künftige Termine zuerst (nach Beginn), dahinter noch laufende, die an einem früheren Tag begonnen haben (z.&nbsp;B. mehrmonatige Kurse)</td><td>upcoming</td></tr>
+    <tr><td><code>data-when</code></td><td>events</td><td><code>upcoming</code>, <code>today</code>, <code>past</code> oder <code>all</code>. Bei <code>upcoming</code> und <code>today</code> kommen heutige und künftige Termine zuerst (nach Beginn), dahinter noch laufende, die an einem früheren Tag begonnen haben (z.&nbsp;B. mehrmonatige Kurse)</td><td>upcoming</td></tr>
+    <tr><td><code>data-days</code></td><td>events</td><td>Nur die nächsten N Tage (bei <code>upcoming</code>) bzw. die letzten N Tage (bei <code>past</code>)</td><td>–</td></tr>
+    <tr><td><code>data-from</code>, <code>data-to</code></td><td>events</td><td>Fester Zeitraum, <code>JJJJ-MM-TT</code>; <code>to</code> inklusive, beide optional. Ersetzt <code>data-when</code></td><td>–</td></tr>
     <tr><td><code>data-kinds</code></td><td>events</td><td><code>31922</code> (ganztägig), <code>31923</code> (mit Uhrzeit) oder beide</td><td>31922,31923</td></tr>
     <tr><td><code>data-search</code></td><td>materials, search</td><td>Volltextsuche (serverseitig, NIP-50); bei <code>search</code> die vorbelegte Startsuche</td><td>–</td></tr>
     <tr><td><code>data-keyword</code></td><td>materials, search</td><td>Exaktes Schlagwort (<code>t</code>-Tag)</td><td>–</td></tr>
