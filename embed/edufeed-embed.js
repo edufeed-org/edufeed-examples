@@ -17,8 +17,11 @@
  *   data-lang       UI language "de" | "en" (default de)
  *   data-author     hex pubkey or npub — only items signed by this key (one person).
  *                   Several keys, comma separated, mean "any of them".
- *   data-community  hex pubkey or npub of an Edufeed community (kind 10222) — only items
- *                   shared into that community (h-tag), regardless of who signed them.
+ *   data-community  hex pubkey or npub of an Edufeed community (kind 10222) — the
+ *                   community's content as its page would show it (spec "Sharing and
+ *                   reading community content"): h-tagged items, kind 6/16 reposts and
+ *                   legacy kind 30222 shares, filtered by the community's access rules
+ *                   (NIP-29 roster, publisher window, badges) and section overrides.
  *                   Several keys, comma separated, mean "any of them".
  *                   Combinable with data-author ("only X's items in community Y").
  *   events only (the widget loads all calendar events of the relay in pages of
@@ -134,13 +137,16 @@
     if (/^[0-9a-f]{64}$/i.test(a)) return a.toLowerCase();
     return npubToHex(a);
   }
-  // "npub1…, hex, npub1…" or an array → array of hex keys (null if none valid)
+  // "npub1…, hex, npub1…" or an array → array of hex keys. null when nothing was
+  // given; an empty array when something was given but no key is valid (the
+  // widget then shows nothing rather than the unfiltered feed).
   function toHexPubkeys(v) {
-    if (!v) return null;
+    if (!v || (Array.isArray(v) && !v.length)) return null;
     var parts = Array.isArray(v) ? v : String(v).split(/[\s,]+/);
     var out = [];
     for (var i = 0; i < parts.length; i++) { var h = toHexPubkey(parts[i]); if (h && out.indexOf(h) < 0) out.push(h); }
-    return out.length ? out : null;
+    if (!out.length) warn('no valid key in', JSON.stringify(v), '– expected npub1… or 64 hex characters');
+    return out;
   }
 
   // --- network: REQ, collect until EOSE, optionally page backwards ------------
@@ -184,6 +190,268 @@
     };
     ws.onerror = function () { finish(new Error('websocket error')); };
     ws.onclose = function () { finish(events.length ? null : new Error('connection closed')); };
+  }
+
+  // --- communities (Communikey: "Sharing and reading community content") ------
+  // A community is a key that published a kind 10222. Reading it, per the spec:
+  //  1. load the definition; type = concord → closed, membership → moderated,
+  //     neither → open; parse the content sections (strict = exhaustive)
+  //  2. moderated: apply a kind 30223 section override by a current moderator
+  //  3. gather content from three sources: h-tagged events, kind 6/16 reposts
+  //     and legacy kind 30222 targeted publications; resolve their references
+  //  4. resolve each section's allowed authors against the roster as it is now
+  //  5. keep an item only if its author, or the sharer of a repost, is allowed
+  var COMMUNITY_RELAYS = ['wss://relay.edufeed.org', 'wss://relay-rpi.edufeed.org']; // kinds 10222, 30222, 30223
+  var SHARE_RELAYS = ['wss://amb-relay.edufeed.org', 'wss://relay.edufeed.org'];     // kind 6/16 reposts (sharer's outbox + app relays)
+  var MOD_ROLES = { admin: 1, king: 1, moderator: 1 };
+  var CHUNK = 50;
+
+  function uniq(arr) { var out = [], seen = {}; for (var i = 0; i < arr.length; i++) if (arr[i] && !seen[arr[i]]) { seen[arr[i]] = 1; out.push(arr[i]); } return out; }
+  function warn() { if (window.console && console.warn) console.warn.apply(console, ['edufeed-embed:'].concat([].slice.call(arguments))); }
+  // run fn(item, done) for every item in parallel, then cb()
+  function each(items, fn, cb) {
+    var n = items.length; if (!n) return cb();
+    for (var i = 0; i < items.length; i++) fn(items[i], function () { if (--n === 0) cb(); });
+  }
+  // same REQ on several relays, merged and deduped by id; fails only if every relay fails
+  function queryMany(relays, filter, cb, pages) {
+    relays = uniq(relays);
+    var all = [], seen = {}, errs = 0;
+    each(relays, function (relay, done) {
+      query(relay, filter, function (err, evs) {
+        if (err) errs++;
+        else for (var i = 0; i < evs.length; i++) if (!seen[evs[i].id]) { seen[evs[i].id] = 1; all.push(evs[i]); }
+        done();
+      }, pages);
+    }, function () { cb(errs === relays.length ? new Error('no relay answered') : null, all); });
+  }
+  // several filters, in chunks, on several relays
+  function queryChunks(relays, filters, cb) {
+    var all = [], seen = {};
+    each(filters, function (f, done) {
+      queryMany(relays, f, function (err, evs) {
+        if (!err) for (var i = 0; i < evs.length; i++) if (!seen[evs[i].id]) { seen[evs[i].id] = 1; all.push(evs[i]); }
+        done();
+      });
+    }, function () { cb(null, all); });
+  }
+  function chunk(arr, n) { var out = []; for (var i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n)); return out; }
+  // newest event; same-second ties go to the lower id
+  function newest(evs) {
+    var best = null;
+    for (var i = 0; i < evs.length; i++) if (!best || evs[i].created_at > best.created_at || (evs[i].created_at === best.created_at && evs[i].id < best.id)) best = evs[i];
+    return best;
+  }
+  function coord(ev) { return ev.kind + ':' + ev.pubkey + ':' + (tag(ev, 'd') || ''); }
+  // addressable kinds (30000–39999): keep only the newest event per coordinate
+  function dedupeAddressable(evs) {
+    var byCoord = {}, out = [];
+    for (var i = 0; i < evs.length; i++) {
+      var ev = evs[i];
+      if (ev.kind < 30000 || ev.kind >= 40000) { out.push(ev); continue; }
+      var c = coord(ev), cur = byCoord[c];
+      if (!cur) byCoord[c] = ev;
+      else if (ev.created_at > cur.created_at || (ev.created_at === cur.created_at && ev.id < cur.id)) { ev._sharers = uniq((ev._sharers || []).concat(cur._sharers || [])); byCoord[c] = ev; }
+      else cur._sharers = uniq((cur._sharers || []).concat(ev._sharers || []));
+    }
+    for (var k in byCoord) out.push(byCoord[k]);
+    return out;
+  }
+
+  // Section block of a kind 10222 (full = true) or a kind 30223 override, where
+  // only content / k / access count. A section's gate is its first access tag
+  // (or, on the definition, a legacy `a` profile list / badge); `r … content`
+  // scopes a relay to the section.
+  function parseSections(tags, full) {
+    var sections = [], cur = null;
+    for (var i = 0; i < tags.length; i++) {
+      var t = tags[i];
+      if (t[0] === 'content') { cur = { name: t[1], kinds: [], gate: null, relays: [] }; sections.push(cur); continue; }
+      if (!cur) continue;
+      if (t[0] === 'k') cur.kinds.push(Number(t[1]));
+      else if (t[0] === 'access' && !cur.gate) cur.gate = { type: 'access', value: t[1], role: t[2] };
+      else if (full && t[0] === 'a' && !cur.gate && /^3000[09]:/.test(t[1] || '')) cur.gate = { type: 'list', coord: t[1], hint: t[2] };
+      else if (full && t[0] === 'r' && t[2] === 'content' && t[1]) cur.relays.push(t[1]);
+    }
+    return sections;
+  }
+  function parseCommunity(ev) {
+    var c = { pubkey: ev.pubkey, created_at: ev.created_at, type: 'open', strict: false, relays: [], enforced: [], membership: null, roster: null, sections: [] };
+    var hasM = false, hasC = false;
+    for (var i = 0; i < ev.tags.length; i++) {
+      var t = ev.tags[i];
+      if (t[0] === 'membership' && t[1]) { hasM = true; c.membership = { gid: t[1], relay: t[2] }; }
+      else if (t[0] === 'concord') hasC = true;
+      else if (t[0] === 'strict' && t[1] === 'content') c.strict = true;
+      else if (t[0] === 'r' && t[1] && t[2] !== 'content') { c.relays.push(t[1]); if (t[2] === 'enforced') c.enforced.push(t[1]); }
+    }
+    c.type = hasM && hasC ? 'open' : hasC ? 'closed' : hasM ? 'moderated' : 'open'; // both pointers → treated as open
+    c.sections = parseSections(ev.tags, true);
+    return c;
+  }
+  // NIP-29 root group roster: members = 39002 ∪ everyone in 39001; roles from 39001
+  function loadRoster(m, cb) {
+    if (!m.relay) return cb(new Error('membership without relay'));
+    query(m.relay, { kinds: [39001, 39002], '#d': [m.gid] }, function (err, evs) {
+      if (err) return cb(err);
+      var admins = newest(evs.filter(function (e) { return e.kind === 39001; }));
+      var members = newest(evs.filter(function (e) { return e.kind === 39002; }));
+      if (!admins && !members) return cb(new Error('group not found'));
+      var r = { members: {}, roles: {}, mods: {} };
+      if (members) tags(members, 'p').forEach(function (pk) { r.members[pk] = 1; });
+      if (admins) for (var i = 0; i < admins.tags.length; i++) {
+        var t = admins.tags[i]; if (t[0] !== 'p' || !t[1]) continue;
+        r.members[t[1]] = 1; r.roles[t[1]] = t.slice(2);
+        for (var j = 2; j < t.length; j++) if (MOD_ROLES[t[j]]) r.mods[t[1]] = 1;
+      }
+      cb(null, r);
+    });
+  }
+  // kind 30223 by a current moderator, newer than the definition, newest wins
+  function applyOverride(c, cb) {
+    if (c.type !== 'moderated' || !c.roster) return cb();
+    queryMany(COMMUNITY_RELAYS.concat(c.relays), { kinds: [30223], '#d': [c.pubkey] }, function (err, evs) {
+      var valid = (evs || []).filter(function (e) { return tag(e, 'd') === c.pubkey && c.roster.mods[e.pubkey] && e.created_at > c.created_at; });
+      var ov = newest(valid);
+      if (ov) c.sections = parseSections(ov.tags, false);
+      cb();
+    });
+  }
+  var communityCache = {};
+  function loadCommunity(pk, baseRelays, cb) {
+    var slot = communityCache[pk];
+    if (slot) { if (slot.c) return cb(slot.c); return slot.q.push(cb); }
+    slot = communityCache[pk] = { c: null, q: [cb] };
+    function done(c) { slot.c = c; var q = slot.q; slot.q = []; for (var i = 0; i < q.length; i++) q[i](c); }
+    queryMany(COMMUNITY_RELAYS.concat(baseRelays), { kinds: [10222], authors: [pk] }, function (err, evs) {
+      var def = newest(evs || []);
+      if (!def) { warn('no community definition (kind 10222) for', pk, '– treating it as an open community'); return done(parseCommunity({ pubkey: pk, created_at: 0, tags: [] })); }
+      var c = parseCommunity(def);
+      if (c.type !== 'moderated') return done(c);
+      loadRoster(c.membership, function (err, roster) {
+        if (err) warn('roster of community', pk, 'unavailable (' + err.message + ') – gated sections show the community key only');
+        c.roster = roster || null;
+        applyOverride(c, function () { done(c); });
+      });
+    });
+  }
+  // allowed authors of a section: null = everyone, else a set; {} = community key only
+  function resolveGate(c, gate, cb) {
+    if (!gate) return cb(null);
+    if (gate.type === 'access') {
+      if (c.type !== 'moderated') return cb(null);         // no roster → open
+      if (!c.roster) return cb({});                        // roster unavailable → owner only
+      if (gate.value === 'members') return cb(c.roster.members);
+      if (gate.value === 'role' && gate.role) { var set = {}; for (var pk in c.roster.roles) if (c.roster.roles[pk].indexOf(gate.role) >= 0) set[pk] = 1; return cb(set); }
+      return cb(null);                                     // malformed → open
+    }
+    var p = gate.coord.split(':'), kind = Number(p[0]), author = p[1], d = p.slice(2).join(':');
+    var relays = [gate.hint].concat(c.relays, COMMUNITY_RELAYS);
+    if (kind === 30000) {
+      queryMany(relays, { kinds: [30000], authors: [author], '#d': [d] }, function (err, evs) {
+        var ev = newest(evs || []); if (!ev) return cb({});   // unreachable list → owner only
+        var set = {}; tags(ev, 'p').forEach(function (pk) { set[pk] = 1; }); cb(set);
+      });
+    } else { // 30009 badge: holders are the p tags of the issuer's kind 8 awards
+      queryMany(relays, { kinds: [8], authors: [author], '#a': [gate.coord] }, function (err, evs) {
+        var set = {}; (evs || []).forEach(function (ev) { tags(ev, 'p').forEach(function (pk) { set[pk] = 1; }); }); cb(set);
+      });
+    }
+  }
+  // Content of one community for the given kinds: raw events, each with
+  // _sharers (pubkeys that reposted it in), already filtered by access rules.
+  function loadCommunityContent(c, kinds, baseRelays, pages, cb) {
+    var byKind = {};
+    c.sections.forEach(function (s) { s.kinds.forEach(function (k) { if (!byKind[k]) byKind[k] = s; }); });
+    var wanted = c.strict ? kinds.filter(function (k) { return byKind[k]; }) : kinds;
+    if (!wanted.length) return cb(null, []);
+    var scoped = []; wanted.forEach(function (k) { if (byKind[k]) scoped = scoped.concat(byKind[k].relays); });
+    var contentRelays = uniq(baseRelays.concat(scoped.length ? scoped : c.relays, c.enforced));
+    var out = {}, refsA = {}, refsE = {};
+    function add(ev, sharers) {
+      if (wanted.indexOf(ev.kind) < 0) return;
+      var e = out[ev.id] || (out[ev.id] = ev);
+      e._sharers = uniq((e._sharers || []).concat(sharers || []));
+    }
+    function ref(map, key, sharer, hint) {
+      var r = map[key] || (map[key] = { sharers: [], hints: [] });
+      r.sharers.push(sharer); if (hint) r.hints.push(hint);
+    }
+    function collectRefs(ev) { // a repost / targeted publication → remember what it shares
+      var k = tag(ev, 'k'); if (k && wanted.indexOf(Number(k)) < 0) return;
+      ev.tags.forEach(function (t) {
+        if (t[0] === 'a' && t[1] && wanted.indexOf(Number(t[1].split(':')[0])) >= 0) ref(refsA, t[1], ev.pubkey, t[2]);
+        else if (t[0] === 'e' && t[1]) ref(refsE, t[1], ev.pubkey, t[2]);
+      });
+    }
+    each([
+      function (done) { // 1. original content carrying the h tag
+        queryMany(contentRelays, { kinds: wanted, '#h': [c.pubkey], limit: pages > 1 ? EVENTS_PAGE : RELAY_MAX }, function (err, evs) { (evs || []).forEach(function (ev) { add(ev); }); done(); }, pages);
+      },
+      function (done) { // 2. NIP-18 reposts with h tags, on the sharers' outbox relays
+        queryMany(uniq(SHARE_RELAYS.concat(c.relays, baseRelays)), { kinds: [6, 16], '#h': [c.pubkey], limit: EVENTS_PAGE }, function (err, evs) { (evs || []).forEach(collectRefs); done(); });
+      },
+      function (done) { // 3. legacy kind 30222 targeted publications
+        queryMany(COMMUNITY_RELAYS.concat(c.relays), { kinds: [30222], '#p': [c.pubkey], '#k': wanted.map(String), limit: EVENTS_PAGE }, function (err, evs) { (evs || []).forEach(collectRefs); done(); });
+      }
+    ], function (fn, done) { fn(done); }, function () {
+      // resolve the shared references, hint relays first
+      var hints = [], aByKind = {}, ids = Object.keys(refsE);
+      for (var a in refsA) { var p = a.split(':'); (aByKind[p[0]] = aByKind[p[0]] || { authors: [], ds: [] }); aByKind[p[0]].authors.push(p[1]); aByKind[p[0]].ds.push(p.slice(2).join(':')); hints = hints.concat(refsA[a].hints); }
+      ids.forEach(function (id) { hints = hints.concat(refsE[id].hints); });
+      var filters = [];
+      for (var k in aByKind) chunk(uniq(aByKind[k].authors), CHUNK).forEach(function (authors) { filters.push({ kinds: [Number(k)], authors: authors, '#d': uniq(aByKind[k].ds) }); });
+      chunk(ids, 100).forEach(function (part) { filters.push({ ids: part }); });
+      var relays = uniq(hints.filter(function (h) { return /^wss?:\/\//.test(h); }).concat(contentRelays, SHARE_RELAYS));
+      queryChunks(relays, filters, function (err, evs) {
+        evs.forEach(function (ev) {
+          var ra = refsA[coord(ev)], re = refsE[ev.id];
+          if (ra) add(ev, ra.sharers);
+          if (re) add(ev, re.sharers);
+        });
+        var list = []; for (var id in out) list.push(out[id]);
+        list = dedupeAddressable(list);
+        // access rules, one gate per section
+        var gates = {}, secs = [];
+        wanted.forEach(function (k) { var s = byKind[k]; if (s && secs.indexOf(s) < 0) secs.push(s); });
+        each(secs, function (s, done) { resolveGate(c, s.gate, function (set) { gates[s.name] = set; done(); }); }, function () {
+          var kept = list.filter(function (ev) {
+            var s = byKind[ev.kind], allowed = s ? gates[s.name] : null;
+            if (allowed === null || allowed === undefined) return true;
+            if (ev.pubkey === c.pubkey || allowed[ev.pubkey]) return true;
+            for (var i = 0; i < ev._sharers.length; i++) if (ev._sharers[i] === c.pubkey || allowed[ev._sharers[i]]) return true;
+            return false;
+          });
+          cb(null, kept);
+        });
+      });
+    });
+  }
+  // Raw events for a widget: plain relay query, or the union of its communities'
+  // content. `extra` adds filter fields to the plain query (search, #t).
+  function fetchContent(o, kinds, extra, pages, cb) {
+    if ((o.author && !o.author.length) || (o.community && !o.community.length)) return cb(null, []);
+    if (!o.community) {
+      var filter = { kinds: kinds, limit: pages > 1 ? EVENTS_PAGE : Math.min(o.limit, RELAY_MAX) };
+      if (o.author) filter.authors = o.author;
+      for (var k in (extra || {})) filter[k] = extra[k];
+      return query(o.relay, filter, cb, pages);
+    }
+    var all = [], seen = {}, errs = 0;
+    each(o.community, function (pk, done) {
+      loadCommunity(pk, [o.relay], function (c) {
+        loadCommunityContent(c, kinds, [o.relay], pages, function (err, evs) {
+          if (err) errs++;
+          else evs.forEach(function (ev) { if (!seen[ev.id]) { seen[ev.id] = 1; all.push(ev); } });
+          done();
+        });
+      });
+    }, function () {
+      if (errs === o.community.length) return cb(new Error('community content unavailable'));
+      all = dedupeAddressable(all);
+      if (o.author) all = all.filter(function (ev) { return o.author.indexOf(ev.pubkey) >= 0; });
+      cb(null, all);
+    });
   }
 
   // --- events (NIP-52) ------------------------------------------------------
@@ -230,11 +498,8 @@
     return fmtDate(e.start, t) + ' · ' + fmtTime(e.start) + (e.end ? '–' + fmtTime(e.end) : '');
   }
   function loadEvents(o, cb) {
-    var filter = { kinds: o.kinds, limit: EVENTS_PAGE };
-    if (o.author) filter.authors = o.author;
-    if (o.community) filter['#h'] = o.community;
     // Relays cannot filter by start, so fetch all events (paged) and filter here.
-    query(o.relay, filter, function (err, evs) {
+    fetchContent(o, o.kinds, null, EVENTS_MAX_PAGES, function (err, evs) {
       if (err) return cb(err);
       var now = new Date();
       var list = evs.map(enrichEvent).filter(function (e) { return e.start; }).filter(function (e) {
@@ -252,7 +517,7 @@
       });
       else list.sort(function (a, b) { return a.start - b.start; });
       cb(null, list.slice(0, o.limit));
-    }, EVENTS_MAX_PAGES);
+    });
   }
   function renderEvents(list, o) {
     var t = o.t;
@@ -307,26 +572,29 @@
     };
   }
   function loadMaterials(o, cb) {
-    // amb-relay.edufeed.org answers "#h" + "search" in one REQ with nothing (2026-10),
-    // so a community-scoped search runs two REQs and intersects by id client side.
-    var splitCommunity = !!(o.community && o.search);
-    var clientFilter = !!(o.subject || o.language || splitCommunity);
-    var filter = { kinds: [30142], limit: clientFilter ? RELAY_MAX : Math.min(o.limit, RELAY_MAX) };
-    if (o.author) filter.authors = o.author;
-    if (o.community && !splitCommunity) filter['#h'] = o.community;
-    if (o.search) filter.search = o.search;
-    if (o.keyword) filter['#t'] = [o.keyword];
+    var extra = {};
+    if (o.search) extra.search = o.search;
+    if (o.keyword) extra['#t'] = [o.keyword];
+    var clientFilter = !!(o.subject || o.language);
     var communityIds = null;
-    if (splitCommunity) {
-      var cf = { kinds: [30142], '#h': o.community, limit: RELAY_MAX };
-      if (o.author) cf.authors = o.author;
-      query(o.relay, cf, function (err, evs) {
+    if (o.community && o.search) {
+      // A relay's full-text search cannot be combined with community content
+      // (shares, access rules), so: search on the relay, then keep the hits
+      // that belong to the community (up to 250 community items).
+      var o2 = {}; for (var k in o) o2[k] = o[k]; o2.limit = RELAY_MAX;
+      fetchContent(o2, [30142], null, 1, function (err, evs) {
         if (err) return cb(err);
-        communityIds = {}; for (var i = 0; i < evs.length; i++) communityIds[evs[i].id] = 1;
-        run();
+        communityIds = {}; evs.forEach(function (ev) { communityIds[ev.id] = 1; });
+        var o3 = {}; for (var k in o) o3[k] = o[k]; o3.community = null; o3.limit = RELAY_MAX;
+        fetchContent(o3, [30142], extra, 1, finish);
       });
-    } else run();
-    function run() { query(o.relay, filter, function (err, evs) {
+    } else if (o.community) {
+      fetchContent(o, [30142], extra, 1, finish);
+    } else {
+      var o4 = {}; for (var k2 in o) o4[k2] = o[k2]; if (clientFilter) o4.limit = RELAY_MAX;
+      fetchContent(o4, [30142], extra, 1, finish);
+    }
+    function finish(err, evs) {
       if (err) return cb(err);
       var list = evs.map(enrichMaterial).filter(function (r) {
         if (communityIds && !communityIds[r.id]) return false;
@@ -336,7 +604,7 @@
       });
       if (!o.search) list.sort(function (a, b) { return (b.datePublished || '').localeCompare(a.datePublished || '') || b.created_at - a.created_at; });
       cb(null, list.slice(0, o.limit));
-    }); }
+    }
   }
   function badges(r, t) {
     var out = [];
@@ -442,7 +710,7 @@
     return nodes.length;
   }
 
-  window.EdufeedEmbed = { mount: mount, mountAll: mountAll, version: '0.3.0' };
+  window.EdufeedEmbed = { mount: mount, mountAll: mountAll, version: '0.4.0' };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { mountAll(); });
   else mountAll();
 })();

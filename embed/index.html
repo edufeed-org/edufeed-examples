@@ -118,6 +118,7 @@
 
   <h3>Materialien einer Community</h3>
   <p>Analog zu den Terminen: <code>data-community</code> zeigt die Materialien, die in eine Community geteilt wurden. Lässt sich mit <code>data-author</code> kombinieren („nur Beiträge von X in Community Y“) und funktioniert auch im interaktiven Suchfeld.</p>
+  <div class="note">Das Widget liest eine Community so, wie es die <a href="https://app.edufeed.org" target="_blank" rel="noopener">Edufeed-App</a> tut: Es lädt die Community-Definition (kind 10222), sammelt Inhalte mit <code>h</code>-Tag, geteilte Inhalte (Reposts, kind 16) und ältere Freigaben (kind 30222) und wendet dann die Zugriffsregeln der Community an – bei moderierten Communities die Mitgliederliste der Gruppe, bei geschlossenen das öffentliche Publisher-Fenster. Was ein Nicht-Mitglied in eine Community mit Mitglieder-Regel schreibt, zeigt das Widget nicht. Die Regeln werden bei jedem Laden neu gelesen.</div>
   <pre><button class="copy">Kopieren</button><code>&lt;div data-edufeed="materials" data-community="npub1hhpplya3ut9h2cyvant6pgq2w7thnkfk0hyhnz7e7gflqmy4h3yqp2p4pk" data-limit="8"&gt;&lt;/div&gt;</code></pre>
   <div class="demo"><div class="demo-label">Live</div>
     <div data-edufeed="materials" data-community="npub1hhpplya3ut9h2cyvant6pgq2w7thnkfk0hyhnz7e7gflqmy4h3yqp2p4pk" data-limit="8"></div>
@@ -184,6 +185,7 @@ box.addEventListener('edufeed:loaded', e =&gt; console.log(e.detail.items));
         <li>Eine Content-Security-Policy darf <code>wss://*.edufeed.org</code> und <code>edufeed-org.github.io</code> nicht blockieren.</li>
         <li>Die Daten werden beim Seitenaufruf live vom Relay geladen – kein Caching, kein Server dazwischen.</li>
         <li>Termine: Relays können nicht nach Startdatum filtern. Das Widget lädt deshalb alle Kalender-Events des Relays seitenweise (500 pro Anfrage, eine Verbindung) und filtert selbst – bei einigen tausend Terminen etwa 1–3 Sekunden.</li>
+        <li>Communities: Neben dem Relay des Widgets werden die Relays der Community, <code>amb-relay.edufeed.org</code> (Reposts), <code>relay-rpi.edufeed.org</code> (Community-Definitionen) und bei moderierten Communities das Gruppen-Relay (<code>groups.edufeed.org</code>) angefragt – die CSP muss diese zulassen.</li>
       </ul>
     </div>
     <div class="doc-card">
