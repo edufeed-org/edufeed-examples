@@ -91,6 +91,13 @@
   <h3>Nur Termine eines bestimmten Veranstalters</h3>
   <p>Mit <code>data-author</code> lassen sich Termine auf einen Nostr-Schlüssel einschränken – als <code>npub…</code> oder Hex. Vergangene Termine zeigt <code>data-when="past"</code>, alle <code>data-when="all"</code>.</p>
   <pre><button class="copy">Kopieren</button><code>&lt;div data-edufeed="events" data-author="npub1…" data-when="all" data-layout="list"&gt;&lt;/div&gt;</code></pre>
+
+  <h3>Termine einer Community</h3>
+  <p>Wenn mehrere Personen für eine Einrichtung eintragen, ist <code>data-author</code> unpraktisch: Es filtert nach dem Schlüssel, der den Termin signiert hat, also nach der einzelnen Person. Mit <code>data-community</code> zeigt das Widget stattdessen alles, was Mitglieder in eine Edufeed-Community geteilt haben – egal, wer es angelegt hat. Angegeben wird der Schlüssel der Community (<code>npub…</code> oder Hex), hier die Edufeed-Community selbst.</p>
+  <pre><button class="copy">Kopieren</button><code>&lt;div data-edufeed="events" data-community="npub1hhpplya3ut9h2cyvant6pgq2w7thnkfk0hyhnz7e7gflqmy4h3yqp2p4pk" data-when="all" data-layout="list" data-limit="6"&gt;&lt;/div&gt;</code></pre>
+  <div class="demo"><div class="demo-label">Live</div>
+    <div data-edufeed="events" data-community="npub1hhpplya3ut9h2cyvant6pgq2w7thnkfk0hyhnz7e7gflqmy4h3yqp2p4pk" data-when="all" data-layout="list" data-limit="6"></div>
+  </div>
 </section>
 
 <section>
@@ -108,11 +115,18 @@
   <div class="demo"><div class="demo-label">Live</div>
     <div data-edufeed="materials" data-search="Schöpfung" data-layout="list" data-limit="6"></div>
   </div>
+
+  <h3>Materialien einer Community</h3>
+  <p>Analog zu den Terminen: <code>data-community</code> zeigt die Materialien, die in eine Community geteilt wurden. Lässt sich mit <code>data-author</code> kombinieren („nur Beiträge von X in Community Y“) und funktioniert auch im interaktiven Suchfeld.</p>
+  <pre><button class="copy">Kopieren</button><code>&lt;div data-edufeed="materials" data-community="npub1hhpplya3ut9h2cyvant6pgq2w7thnkfk0hyhnz7e7gflqmy4h3yqp2p4pk" data-limit="8"&gt;&lt;/div&gt;</code></pre>
+  <div class="demo"><div class="demo-label">Live</div>
+    <div data-edufeed="materials" data-community="npub1hhpplya3ut9h2cyvant6pgq2w7thnkfk0hyhnz7e7gflqmy4h3yqp2p4pk" data-limit="8"></div>
+  </div>
 </section>
 
 <section>
   <h2>Interaktive Suche <span class="pill">NIP-50 · amb-relay.edufeed.org</span></h2>
-  <p>Ein Suchfeld, in dem Besucher:innen selbst suchen. Die Anfrage geht live an die Volltextsuche des Relays, Treffer erscheinen beim Tippen (ab 2 Zeichen) oder nach Enter. Mit <code>data-search</code> lässt sich eine Startsuche vorbelegen, mit <code>data-subject</code>, <code>data-language</code> oder <code>data-author</code> der Suchraum einschränken.</p>
+  <p>Ein Suchfeld, in dem Besucher:innen selbst suchen. Die Anfrage geht live an die Volltextsuche des Relays, Treffer erscheinen beim Tippen (ab 2 Zeichen) oder nach Enter. Mit <code>data-search</code> lässt sich eine Startsuche vorbelegen, mit <code>data-subject</code>, <code>data-language</code>, <code>data-author</code> oder <code>data-community</code> der Suchraum einschränken.</p>
   <pre><button class="copy">Kopieren</button><code>&lt;div data-edufeed="search" data-placeholder="Lernmaterial suchen…" data-limit="12"&gt;&lt;/div&gt;</code></pre>
   <div class="demo"><div class="demo-label">Live – einfach tippen</div>
     <div data-edufeed="search" data-placeholder="Lernmaterial suchen…" data-limit="12"></div>
@@ -134,7 +148,8 @@
     <tr><td><code>data-limit</code></td><td>beide</td><td>Maximale Anzahl Einträge (1–250)</td><td>12</td></tr>
     <tr><td><code>data-layout</code></td><td>beide</td><td><code>cards</code> oder <code>list</code></td><td>cards</td></tr>
     <tr><td><code>data-lang</code></td><td>beide</td><td>Sprache der Beschriftungen: <code>de</code> oder <code>en</code></td><td>de</td></tr>
-    <tr><td><code>data-author</code></td><td>beide</td><td>Nur Einträge dieses Autors (npub oder Hex-Pubkey)</td><td>–</td></tr>
+    <tr><td><code>data-author</code></td><td>beide</td><td>Nur Einträge, die mit diesem Schlüssel signiert wurden (npub oder Hex-Pubkey)</td><td>–</td></tr>
+    <tr><td><code>data-community</code></td><td>beide</td><td>Nur Einträge, die in diese Edufeed-Community geteilt wurden (npub oder Hex-Pubkey der Community, <code>h</code>-Tag); kombinierbar mit <code>data-author</code></td><td>–</td></tr>
     <tr><td><code>data-when</code></td><td>events</td><td><code>upcoming</code>, <code>past</code> oder <code>all</code></td><td>upcoming</td></tr>
     <tr><td><code>data-kinds</code></td><td>events</td><td><code>31922</code> (ganztägig), <code>31923</code> (mit Uhrzeit) oder beide</td><td>31922,31923</td></tr>
     <tr><td><code>data-search</code></td><td>materials, search</td><td>Volltextsuche (serverseitig, NIP-50); bei <code>search</code> die vorbelegte Startsuche</td><td>–</td></tr>
