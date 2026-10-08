@@ -384,15 +384,14 @@
       var e = out[ev.id] || (out[ev.id] = ev);
       e._sharers = uniq((e._sharers || []).concat(sharers || []));
     }
-    function ref(map, key, sharer, hint) {
-      var r = map[key] || (map[key] = { sharers: [], hints: [] });
-      r.sharers.push(sharer); if (hint) r.hints.push(hint);
+    function ref(map, key, sharer) {
+      (map[key] || (map[key] = { sharers: [] })).sharers.push(sharer);
     }
     function collectRefs(ev) { // a repost / targeted publication → remember what it shares
       var k = tag(ev, 'k'); if (k && wanted.indexOf(Number(k)) < 0) return;
       ev.tags.forEach(function (t) {
-        if (t[0] === 'a' && t[1] && wanted.indexOf(Number(t[1].split(':')[0])) >= 0) ref(refsA, t[1], ev.pubkey, t[2]);
-        else if (t[0] === 'e' && t[1]) ref(refsE, t[1], ev.pubkey, t[2]);
+        if (t[0] === 'a' && t[1] && wanted.indexOf(Number(t[1].split(':')[0])) >= 0) ref(refsA, t[1], ev.pubkey);
+        else if (t[0] === 'e' && t[1]) ref(refsE, t[1], ev.pubkey);
       });
     }
     each([
@@ -406,14 +405,15 @@
         queryMany(COMMUNITY_RELAYS.concat(c.relays), { kinds: [30222], '#p': [c.pubkey], '#k': wanted.map(String), limit: EVENTS_PAGE }, function (err, evs) { (evs || []).forEach(collectRefs); done(); });
       }
     ], function (fn, done) { fn(done); }, function () {
-      // resolve the shared references, hint relays first
-      var hints = [], aByKind = {}, ids = Object.keys(refsE);
-      for (var a in refsA) { var p = a.split(':'); (aByKind[p[0]] = aByKind[p[0]] || { authors: [], ds: [] }); aByKind[p[0]].authors.push(p[1]); aByKind[p[0]].ds.push(p.slice(2).join(':')); hints = hints.concat(refsA[a].hints); }
-      ids.forEach(function (id) { hints = hints.concat(refsE[id].hints); });
+      // Resolve the shared references. The relay hints on reposts are NOT
+      // followed: anyone can publish a repost, and the widget cannot verify
+      // signatures, so it only talks to the community's and edufeed's relays.
+      var aByKind = {}, ids = Object.keys(refsE);
+      for (var a in refsA) { var p = a.split(':'); (aByKind[p[0]] = aByKind[p[0]] || { authors: [], ds: [] }); aByKind[p[0]].authors.push(p[1]); aByKind[p[0]].ds.push(p.slice(2).join(':')); }
       var filters = [];
       for (var k in aByKind) chunk(uniq(aByKind[k].authors), CHUNK).forEach(function (authors) { filters.push({ kinds: [Number(k)], authors: authors, '#d': uniq(aByKind[k].ds) }); });
       chunk(ids, 100).forEach(function (part) { filters.push({ ids: part }); });
-      var relays = uniq(hints.filter(function (h) { return /^wss?:\/\//.test(h); }).concat(contentRelays, SHARE_RELAYS));
+      var relays = uniq(contentRelays.concat(SHARE_RELAYS));
       queryChunks(relays, filters, function (err, evs) {
         evs.forEach(function (ev) {
           var ra = refsA[coord(ev)], re = refsE[ev.id];
