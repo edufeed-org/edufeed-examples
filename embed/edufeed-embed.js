@@ -15,9 +15,11 @@
  *   data-limit      max items to show (default 12, max 250)
  *   data-layout     "cards" | "list"  (default cards)
  *   data-lang       UI language "de" | "en" (default de)
- *   data-author     hex pubkey or npub — only items signed by this key (one person)
+ *   data-author     hex pubkey or npub — only items signed by this key (one person).
+ *                   Several keys, comma separated, mean "any of them".
  *   data-community  hex pubkey or npub of an Edufeed community (kind 10222) — only items
  *                   shared into that community (h-tag), regardless of who signed them.
+ *                   Several keys, comma separated, mean "any of them".
  *                   Combinable with data-author ("only X's items in community Y").
  *   events only (the widget loads all calendar events of the relay in pages of
  *   500 and filters/sorts them here, since relays cannot filter by start date):
@@ -132,6 +134,14 @@
     if (/^[0-9a-f]{64}$/i.test(a)) return a.toLowerCase();
     return npubToHex(a);
   }
+  // "npub1…, hex, npub1…" or an array → array of hex keys (null if none valid)
+  function toHexPubkeys(v) {
+    if (!v) return null;
+    var parts = Array.isArray(v) ? v : String(v).split(/[\s,]+/);
+    var out = [];
+    for (var i = 0; i < parts.length; i++) { var h = toHexPubkey(parts[i]); if (h && out.indexOf(h) < 0) out.push(h); }
+    return out.length ? out : null;
+  }
 
   // --- network: REQ, collect until EOSE, optionally page backwards ------------
   // A relay answers `limit` with the most recently *created* events, not the
@@ -221,8 +231,8 @@
   }
   function loadEvents(o, cb) {
     var filter = { kinds: o.kinds, limit: EVENTS_PAGE };
-    if (o.author) filter.authors = [o.author];
-    if (o.community) filter['#h'] = [o.community];
+    if (o.author) filter.authors = o.author;
+    if (o.community) filter['#h'] = o.community;
     // Relays cannot filter by start, so fetch all events (paged) and filter here.
     query(o.relay, filter, function (err, evs) {
       if (err) return cb(err);
@@ -302,14 +312,14 @@
     var splitCommunity = !!(o.community && o.search);
     var clientFilter = !!(o.subject || o.language || splitCommunity);
     var filter = { kinds: [30142], limit: clientFilter ? RELAY_MAX : Math.min(o.limit, RELAY_MAX) };
-    if (o.author) filter.authors = [o.author];
-    if (o.community && !splitCommunity) filter['#h'] = [o.community];
+    if (o.author) filter.authors = o.author;
+    if (o.community && !splitCommunity) filter['#h'] = o.community;
     if (o.search) filter.search = o.search;
     if (o.keyword) filter['#t'] = [o.keyword];
     var communityIds = null;
     if (splitCommunity) {
-      var cf = { kinds: [30142], '#h': [o.community], limit: RELAY_MAX };
-      if (o.author) cf.authors = [o.author];
+      var cf = { kinds: [30142], '#h': o.community, limit: RELAY_MAX };
+      if (o.author) cf.authors = o.author;
       query(o.relay, cf, function (err, evs) {
         if (err) return cb(err);
         communityIds = {}; for (var i = 0; i < evs.length; i++) communityIds[evs[i].id] = 1;
@@ -379,8 +389,8 @@
     o.limit = Math.max(1, Math.min(RELAY_MAX, parseInt(o.limit, 10) || 12));
     o.layout = o.layout === 'list' ? 'list' : 'cards';
     o.t = I18N[o.lang] || I18N.de;
-    o.author = toHexPubkey(o.author);
-    o.community = toHexPubkey(o.community);
+    o.author = toHexPubkeys(o.author);       // arrays of hex keys or null
+    o.community = toHexPubkeys(o.community);
     o.when = ['upcoming', 'all', 'past'].indexOf(o.when) >= 0 ? o.when : 'upcoming';
     o.kinds = String(o.kinds || '31922,31923').split(',').map(Number).filter(function (n) { return n === 31922 || n === 31923; });
     if (!o.kinds.length) o.kinds = [31922, 31923];
