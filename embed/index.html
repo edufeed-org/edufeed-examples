@@ -93,7 +93,7 @@
   <pre><button class="copy">Kopieren</button><code>&lt;div data-edufeed="events" data-author="npub1…" data-when="all" data-layout="list"&gt;&lt;/div&gt;</code></pre>
 
   <h3>Termine einer Community</h3>
-  <p>Wenn mehrere Personen für eine Einrichtung eintragen, ist <code>data-author</code> unpraktisch: Es filtert nach dem Schlüssel, der den Termin signiert hat, also nach der einzelnen Person. Mit <code>data-community</code> zeigt das Widget stattdessen alles, was Mitglieder in eine Edufeed-Community geteilt haben – egal, wer es angelegt hat. Angegeben wird der Schlüssel der Community (<code>npub…</code> oder Hex), hier die Edufeed-Community selbst.</p>
+  <p>Wenn mehrere Personen für eine Einrichtung eintragen, ist <code>data-author</code> unpraktisch: Es filtert nach dem Schlüssel, der den Termin signiert hat, also nach der einzelnen Person. Mit <code>data-community</code> zeigt das Widget stattdessen alles, was Mitglieder in eine Edufeed-Community geteilt haben – egal, wer es angelegt hat. Angegeben wird der Schlüssel der Community (<code>npub…</code> oder Hex), hier die Edufeed-Community selbst. Mehrere Communities lassen sich durch Komma getrennt angeben.</p>
   <pre><button class="copy">Kopieren</button><code>&lt;div data-edufeed="events" data-community="npub1hhpplya3ut9h2cyvant6pgq2w7thnkfk0hyhnz7e7gflqmy4h3yqp2p4pk" data-when="all" data-layout="list" data-limit="6"&gt;&lt;/div&gt;</code></pre>
   <div class="demo"><div class="demo-label">Live</div>
     <div data-edufeed="events" data-community="npub1hhpplya3ut9h2cyvant6pgq2w7thnkfk0hyhnz7e7gflqmy4h3yqp2p4pk" data-when="all" data-layout="list" data-limit="6"></div>
@@ -148,8 +148,8 @@
     <tr><td><code>data-limit</code></td><td>beide</td><td>Maximale Anzahl Einträge (1–250)</td><td>12</td></tr>
     <tr><td><code>data-layout</code></td><td>beide</td><td><code>cards</code> oder <code>list</code></td><td>cards</td></tr>
     <tr><td><code>data-lang</code></td><td>beide</td><td>Sprache der Beschriftungen: <code>de</code> oder <code>en</code></td><td>de</td></tr>
-    <tr><td><code>data-author</code></td><td>beide</td><td>Nur Einträge, die mit diesem Schlüssel signiert wurden (npub oder Hex-Pubkey)</td><td>–</td></tr>
-    <tr><td><code>data-community</code></td><td>beide</td><td>Nur Einträge, die in diese Edufeed-Community geteilt wurden (npub oder Hex-Pubkey der Community, <code>h</code>-Tag); kombinierbar mit <code>data-author</code></td><td>–</td></tr>
+    <tr><td><code>data-author</code></td><td>beide</td><td>Nur Einträge, die mit diesem Schlüssel signiert wurden (npub oder Hex-Pubkey). Mehrere Schlüssel durch Komma getrennt: „von einem davon“</td><td>–</td></tr>
+    <tr><td><code>data-community</code></td><td>beide</td><td>Nur Einträge, die in diese Edufeed-Community geteilt wurden (npub oder Hex-Pubkey der Community, <code>h</code>-Tag). Mehrere Communities durch Komma getrennt: „in einer davon“; kombinierbar mit <code>data-author</code></td><td>–</td></tr>
     <tr><td><code>data-when</code></td><td>events</td><td><code>upcoming</code>, <code>past</code> oder <code>all</code>. Bei <code>upcoming</code> kommen heutige und künftige Termine zuerst (nach Beginn), dahinter noch laufende, die an einem früheren Tag begonnen haben (z.&nbsp;B. mehrmonatige Kurse)</td><td>upcoming</td></tr>
     <tr><td><code>data-kinds</code></td><td>events</td><td><code>31922</code> (ganztägig), <code>31923</code> (mit Uhrzeit) oder beide</td><td>31922,31923</td></tr>
     <tr><td><code>data-search</code></td><td>materials, search</td><td>Volltextsuche (serverseitig, NIP-50); bei <code>search</code> die vorbelegte Startsuche</td><td>–</td></tr>
