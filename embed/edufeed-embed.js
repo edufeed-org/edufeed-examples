@@ -26,9 +26,12 @@
  *                   Combinable with data-author ("only X's items in community Y").
  *   events only (the widget loads all calendar events of the relay in pages of
  *   500 and filters/sorts them here, since relays cannot filter by start date):
- *     data-when     "upcoming" | "all" | "past"  (default upcoming; upcoming lists
- *                   today's and future events first, then still-running ones
- *                   that started on an earlier day)
+ *     data-when     "upcoming" | "today" | "past" | "all"  (default upcoming; upcoming
+ *                   lists today's and future events first, then still-running ones
+ *                   that started on an earlier day; today = everything taking place today)
+ *     data-days     with upcoming: only the next N days; with past: only the last N days
+ *     data-from     YYYY-MM-DD — fixed range instead of data-when; data-to is inclusive
+ *     data-to       and optional (default: open end)
  *     data-kinds    comma list, default "31922,31923"
  *   materials and search:
  *     data-search   full-text search (NIP-50, server side); for "search" the initial query
@@ -116,6 +119,14 @@
   function tag(ev, name) { for (var i = 0; i < ev.tags.length; i++) if (ev.tags[i][0] === name) return ev.tags[i][1]; return null; }
   function tags(ev, name) { var out = []; for (var i = 0; i < ev.tags.length; i++) if (ev.tags[i][0] === name) out.push(ev.tags[i][1]); return out; }
   function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  // "YYYY-MM-DD" (local midnight) or a Date → Date, else null
+  function parseDay(v) {
+    if (!v) return null;
+    if (v instanceof Date) return isNaN(v) ? null : v;
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(v).trim());
+    if (!m) { warn('ignoring date', JSON.stringify(v), '– expected YYYY-MM-DD'); return null; }
+    return new Date(+m[1], +m[2] - 1, +m[3]);
+  }
 
   // bech32 npub → hex (NIP-19), so data-author accepts both forms
   var B32 = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
@@ -501,18 +512,28 @@
     // Relays cannot filter by start, so fetch all events (paged) and filter here.
     fetchContent(o, o.kinds, null, EVENTS_MAX_PAGES, function (err, evs) {
       if (err) return cb(err);
-      var now = new Date();
+      var now = new Date(), today = new Date(now), tomorrow;
+      today.setHours(0, 0, 0, 0); tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+      var DAY = 86400000;
+      // An event takes place in [start, until); keep those overlapping the window.
+      var lo = null, hi = null;
+      if (o.when === 'upcoming') { lo = now; if (o.days) hi = new Date(now.getTime() + o.days * DAY); }
+      else if (o.when === 'past') { hi = now; if (o.days) lo = new Date(now.getTime() - o.days * DAY); }
+      else if (o.when === 'today') { lo = today; hi = tomorrow; }
+      else if (o.when === 'range') { lo = o.from; hi = o.to ? new Date(o.to.getTime() + DAY) : null; }
       var list = evs.map(enrichEvent).filter(function (e) { return e.start; }).filter(function (e) {
-        if (o.when === 'upcoming') return e.until >= now;
-        if (o.when === 'past') return e.until < now;
+        if (o.when === 'upcoming') return e.until >= lo && (!hi || e.start < hi);
+        if (o.when === 'past') return e.until < hi && (!lo || e.until >= lo);
+        if (lo && !(e.until > lo || e.start >= lo)) return false;   // ended before the window
+        if (hi && e.start >= hi) return false;                      // starts after the window
         return true;
       });
-      var today = new Date(now); today.setHours(0, 0, 0, 0);
+      // Events starting inside the window first (soonest start), then those
+      // that started before it and are still running (long courses).
+      var edge = o.when === 'range' ? lo : o.when === 'all' ? null : today;
       if (o.when === 'past') list.sort(function (a, b) { return b.start - a.start; });
-      else if (o.when === 'upcoming') list.sort(function (a, b) {
-        // today's and future events first (soonest start), then events that
-        // started on an earlier day and are still running (long courses)
-        var ra = a.start < today ? 1 : 0, rb = b.start < today ? 1 : 0;
+      else if (edge) list.sort(function (a, b) {
+        var ra = a.start < edge ? 1 : 0, rb = b.start < edge ? 1 : 0;
         return (ra - rb) || (a.start - b.start);
       });
       else list.sort(function (a, b) { return a.start - b.start; });
@@ -648,7 +669,7 @@
     var o = {
       type: d.edufeed || 'events', relay: d.relay, limit: d.limit, layout: d.layout, lang: d.lang, author: d.author, community: d.community,
       when: d.when, kinds: d.kinds, search: d.search, keyword: d.keyword, subject: d.subject, language: d.language,
-      placeholder: d.placeholder, min: d.min
+      placeholder: d.placeholder, min: d.min, days: d.days, from: d.from, to: d.to
     };
     for (var k in (overrides || {})) o[k] = overrides[k];
     o.type = ['materials', 'search'].indexOf(o.type) >= 0 ? o.type : 'events';
@@ -659,7 +680,10 @@
     o.t = I18N[o.lang] || I18N.de;
     o.author = toHexPubkeys(o.author);       // arrays of hex keys or null
     o.community = toHexPubkeys(o.community);
-    o.when = ['upcoming', 'all', 'past'].indexOf(o.when) >= 0 ? o.when : 'upcoming';
+    o.when = ['upcoming', 'today', 'all', 'past'].indexOf(o.when) >= 0 ? o.when : 'upcoming';
+    o.days = parseInt(o.days, 10) > 0 ? parseInt(o.days, 10) : null;
+    o.from = parseDay(o.from); o.to = parseDay(o.to);
+    if (o.from || o.to) o.when = 'range';
     o.kinds = String(o.kinds || '31922,31923').split(',').map(Number).filter(function (n) { return n === 31922 || n === 31923; });
     if (!o.kinds.length) o.kinds = [31922, 31923];
     return o;
