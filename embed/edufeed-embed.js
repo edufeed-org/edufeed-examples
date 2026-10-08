@@ -12,15 +12,18 @@
  * Attributes (all optional):
  *   data-relay      WebSocket URL. Default: wss://relay.edufeed.org (events),
  *                   wss://amb-relay.edufeed.org (materials)
- *   data-limit      max items to show (default 12, relay max 250)
+ *   data-limit      max items to show (default 12, max 250)
  *   data-layout     "cards" | "list"  (default cards)
  *   data-lang       UI language "de" | "en" (default de)
  *   data-author     hex pubkey or npub — only items signed by this key (one person)
  *   data-community  hex pubkey or npub of an Edufeed community (kind 10222) — only items
  *                   shared into that community (h-tag), regardless of who signed them.
  *                   Combinable with data-author ("only X's items in community Y").
- *   events only:
- *     data-when     "upcoming" | "all" | "past"  (default upcoming)
+ *   events only (the widget loads all calendar events of the relay in pages of
+ *   500 and filters/sorts them here, since relays cannot filter by start date):
+ *     data-when     "upcoming" | "all" | "past"  (default upcoming; upcoming lists
+ *                   today's and future events first, then still-running ones
+ *                   that started on an earlier day)
  *     data-kinds    comma list, default "31922,31923"
  *   materials and search:
  *     data-search   full-text search (NIP-50, server side); for "search" the initial query
@@ -38,8 +41,10 @@
   'use strict';
 
   var DEFAULT_RELAY = { events: 'wss://relay.edufeed.org', materials: 'wss://amb-relay.edufeed.org' };
-  var RELAY_MAX = 250;
-  var TIMEOUT_MS = 15000;
+  var RELAY_MAX = 250;          // per-REQ cap of amb-relay.edufeed.org (materials)
+  var EVENTS_PAGE = 500;        // per-REQ cap of relay.edufeed.org (events)
+  var EVENTS_MAX_PAGES = 20;    // events: up to 20 x 500 = 10 000 events per widget
+  var TIMEOUT_MS = 15000;       // per page
 
   var I18N = {
     de: { loading: 'Lade Daten von Edufeed…', error: 'Daten konnten nicht geladen werden.', empty: 'Nichts gefunden.',
@@ -128,27 +133,43 @@
     return npubToHex(a);
   }
 
-  // --- network: one REQ, collect until EOSE --------------------------------
-  function query(relay, filter, cb) {
-    var ws, done = false, events = [], subId = 'ef-' + Math.random().toString(36).slice(2, 9);
-    var seen = {};
+  // --- network: REQ, collect until EOSE, optionally page backwards ------------
+  // A relay answers `limit` with the most recently *created* events, not the
+  // ones happening next, and caps every REQ (relay.edufeed.org: 500). With
+  // pages > 1, after each EOSE another REQ is sent on the same socket with
+  // until = oldest created_at seen so far, until a page brings nothing new
+  // or `pages` is reached. Dedup by id.
+  function query(relay, filter, cb, pages) {
+    var ws, done = false, events = [], base = 'ef-' + Math.random().toString(36).slice(2, 9);
+    var seen = {}, subId, page = 0, pageNew = 0, oldest = null, timer;
+    pages = pages || 1;
     function finish(err) {
       if (done) return; done = true; clearTimeout(timer);
       try { ws.close(); } catch (e) {}
       cb(err, events);
     }
+    function send() {
+      page++; pageNew = 0; subId = base + '-' + page;
+      var f = {}; for (var k in filter) f[k] = filter[k];
+      if (oldest !== null) f.until = oldest;
+      clearTimeout(timer);
+      timer = setTimeout(function () { finish(events.length ? null : new Error('timeout')); }, TIMEOUT_MS);
+      ws.send(JSON.stringify(['REQ', subId, f]));
+    }
     try { ws = new WebSocket(relay); } catch (e) { return cb(e, []); }
-    var timer = setTimeout(function () { finish(events.length ? null : new Error('timeout')); }, TIMEOUT_MS);
-    ws.onopen = function () { ws.send(JSON.stringify(['REQ', subId, filter])); };
+    timer = setTimeout(function () { finish(new Error('timeout')); }, TIMEOUT_MS);
+    ws.onopen = send;
     ws.onmessage = function (m) {
       var f; try { f = JSON.parse(m.data); } catch (e) { return; }
       if (f[0] === 'EVENT' && f[1] === subId) {
-        if (!seen[f[2].id]) { seen[f[2].id] = 1; events.push(f[2]); }
+        var ev = f[2];
+        if (!seen[ev.id]) { seen[ev.id] = 1; events.push(ev); pageNew++; }
+        if (oldest === null || ev.created_at < oldest) oldest = ev.created_at;
       } else if (f[0] === 'EOSE' && f[1] === subId) {
         try { ws.send(JSON.stringify(['CLOSE', subId])); } catch (e) {}
-        finish(null);
+        if (page < pages && pageNew > 0) send(); else finish(null);
       } else if (f[0] === 'CLOSED' && f[1] === subId) {
-        finish(new Error(f[2] || 'closed'));
+        finish(events.length ? null : new Error(f[2] || 'closed'));
       }
     };
     ws.onerror = function () { finish(new Error('websocket error')); };
@@ -165,6 +186,16 @@
     var n = Number(s); return isFinite(n) ? new Date(n * 1000) : null;
   }
   function enrichEvent(ev) {
+    var start = parseDate(ev, 'start'), end = parseDate(ev, 'end');
+    // Some source feeds emit an end before the start (often 00:00 of the same
+    // day); such an end is meaningless, treat the event as having none.
+    if (start && end && end < start) end = null;
+    // `until`: when the event is over. Date-based events (31922) without an
+    // end last the whole start day; NIP-52 end dates are exclusive.
+    var until = end;
+    if (start && ev.kind === 31922 && (!end || end.getTime() === start.getTime())) {
+      until = new Date(start); until.setDate(until.getDate() + 1);
+    }
     return {
       id: ev.id, kind: ev.kind,
       title: tag(ev, 'title') || '(ohne Titel)',
@@ -172,7 +203,7 @@
       location: tag(ev, 'location') || '',
       image: tag(ev, 'image'),
       link: tags(ev, 'r').map(safeUrl).filter(Boolean)[0] || null,
-      start: parseDate(ev, 'start'), end: parseDate(ev, 'end')
+      start: start, end: end, until: until || start
     };
   }
   function fmtTime(d) { return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
@@ -189,21 +220,29 @@
     return fmtDate(e.start, t) + ' · ' + fmtTime(e.start) + (e.end ? '–' + fmtTime(e.end) : '');
   }
   function loadEvents(o, cb) {
-    var filter = { kinds: o.kinds, limit: RELAY_MAX };
+    var filter = { kinds: o.kinds, limit: EVENTS_PAGE };
     if (o.author) filter.authors = [o.author];
     if (o.community) filter['#h'] = [o.community];
+    // Relays cannot filter by start, so fetch all events (paged) and filter here.
     query(o.relay, filter, function (err, evs) {
       if (err) return cb(err);
       var now = new Date();
       var list = evs.map(enrichEvent).filter(function (e) { return e.start; }).filter(function (e) {
-        var ref = e.end || e.start;
-        if (o.when === 'upcoming') return ref >= now;
-        if (o.when === 'past') return ref < now;
+        if (o.when === 'upcoming') return e.until >= now;
+        if (o.when === 'past') return e.until < now;
         return true;
       });
-      list.sort(function (a, b) { return o.when === 'past' ? b.start - a.start : a.start - b.start; });
+      var today = new Date(now); today.setHours(0, 0, 0, 0);
+      if (o.when === 'past') list.sort(function (a, b) { return b.start - a.start; });
+      else if (o.when === 'upcoming') list.sort(function (a, b) {
+        // today's and future events first (soonest start), then events that
+        // started on an earlier day and are still running (long courses)
+        var ra = a.start < today ? 1 : 0, rb = b.start < today ? 1 : 0;
+        return (ra - rb) || (a.start - b.start);
+      });
+      else list.sort(function (a, b) { return a.start - b.start; });
       cb(null, list.slice(0, o.limit));
-    });
+    }, EVENTS_MAX_PAGES);
   }
   function renderEvents(list, o) {
     var t = o.t;
@@ -393,7 +432,7 @@
     return nodes.length;
   }
 
-  window.EdufeedEmbed = { mount: mount, mountAll: mountAll, version: '0.2.0' };
+  window.EdufeedEmbed = { mount: mount, mountAll: mountAll, version: '0.3.0' };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { mountAll(); });
   else mountAll();
 })();
